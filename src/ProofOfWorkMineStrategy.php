@@ -28,8 +28,9 @@ final class ProofOfWorkMineStrategy implements MineStrategyInterface
     public function mine(BlockInterface $block): bool
     {
         $nonce = 0;
+        $prefix = str_repeat('0', $this->difficulty);
 
-        while(substr(hash('sha256', $block->getHash() . $nonce), 0, $this->difficulty) !== str_repeat('0', $this->difficulty)) {
+        while(substr(hash('sha256', $block->getHash() . $nonce), 0, $this->difficulty) !== $prefix) {
             ++$nonce;
         }
 
