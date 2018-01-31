@@ -1,0 +1,8 @@
+{
+    "name": "blockchain-php/blockchain",
+    "autoload": {
+        "psr-4": {
+            "Blockchain\\": "src/"
+        }
+    }
+}
