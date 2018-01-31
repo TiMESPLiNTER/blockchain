@@ -8,22 +8,22 @@ namespace Blockchain;
 class Blockchain
 {
     /**
-     * @var array|Block[]
+     * @var array|BlockInterface[]
      */
     private $chain;
 
     /**
-     * @var int
+     * @var MineStrategyInterface
      */
-    private $difficulty;
+    private $mineStrategy;
 
     /**
-     * @param int $difficulty
+     * @param MineStrategyInterface $mineStrategy
      */
-    public function __construct(int $difficulty)
+    public function __construct(MineStrategyInterface $mineStrategy)
     {
         $this->chain = [$this->createGenesisBlock()];
-        $this->difficulty = $difficulty;
+        $this->mineStrategy = $mineStrategy;
     }
 
     /**
@@ -33,7 +33,7 @@ class Blockchain
     public function addBlock(Block $block): self
     {
         $block->setPreviousHash($this->getLatestBlock()->getHash());
-        $block->mine($this->difficulty);
+        $this->mineStrategy->mine($block);
         $this->chain[] = $block;
 
         return $this;

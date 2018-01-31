@@ -5,7 +5,7 @@ namespace Blockchain;
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
-class Block
+final class Block implements BlockInterface
 {
 
     /**
@@ -29,11 +29,6 @@ class Block
     private $timestamp;
 
     /**
-     * @var int
-     */
-    private $nonce = 0;
-
-    /**
      * @param string $data
      * @param \DateTime $timestamp
      */
@@ -42,26 +37,6 @@ class Block
         $this->data = $data;
         $this->timestamp = $timestamp;
         $this->hash = $this->calculateHash();
-    }
-
-    public function refreshHash()
-    {
-        $this->hash = $this->calculateHash();
-    }
-
-    public function mine(int $difficulty): bool
-    {
-        while(substr($this->hash, 0, $difficulty) !== str_repeat('0', $difficulty)) {
-            ++$this->nonce;
-            $this->refreshHash();
-        }
-
-        return true;
-    }
-
-    public function calculateHash()
-    {
-        return hash('sha256', $this->data . $this->timestamp->format('c') . $this->previousHash . $this->nonce);
     }
 
     /**
@@ -86,7 +61,7 @@ class Block
     public function setPreviousHash(?string $previousHash)
     {
         $this->previousHash = $previousHash;
-        $this->refreshHash();
+        $this->hash = $this->calculateHash();
     }
 
     /**
@@ -103,5 +78,10 @@ class Block
     public function getTimestamp(): \DateTime
     {
         return $this->timestamp;
+    }
+
+    private function calculateHash()
+    {
+        return hash('sha256', $this->data . $this->timestamp->format('c') . $this->previousHash);
     }
 }

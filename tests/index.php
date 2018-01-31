@@ -4,10 +4,11 @@ namespace Blockchain\Tests;
 
 use Blockchain\Block;
 use Blockchain\Blockchain;
+use Blockchain\ProofOfWorkMineStrategy;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$blockchain = new Blockchain(5);
+$blockchain = new Blockchain(new ProofOfWorkMineStrategy(5));
 
 $start = microtime(true);
 
