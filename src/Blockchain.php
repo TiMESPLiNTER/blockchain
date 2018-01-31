@@ -33,7 +33,13 @@ class Blockchain
     public function addBlock(Block $block): self
     {
         $block->setPreviousHash($this->getLatestBlock()->getHash());
-        $this->mineStrategy->mine($block);
+
+        if (false === $this->mineStrategy->mine($block)) {
+            throw new \RuntimeException(
+                sprintf('Could not mine block with hash "%s"', $block->getHash())
+            );
+        }
+
         $this->chain[] = $block;
 
         return $this;
