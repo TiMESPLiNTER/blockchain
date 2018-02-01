@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Timesplinter\Blockchain;
 
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
-class Blockchain
+final class Blockchain implements BlockchainInterface
 {
     /**
      * @var array|BlockInterface[]
@@ -13,25 +15,31 @@ class Blockchain
     private $chain;
 
     /**
-     * @var MineStrategyInterface
+     * @var StrategyInterface
      */
     private $mineStrategy;
 
     /**
-     * @param MineStrategyInterface $mineStrategy
+     * @param StrategyInterface $mineStrategy
      */
-    public function __construct(MineStrategyInterface $mineStrategy)
+    public function __construct(StrategyInterface $mineStrategy)
     {
-        $this->chain = [$this->createGenesisBlock()];
         $this->mineStrategy = $mineStrategy;
+        $this->chain = [$mineStrategy->getGenesisBlock()];
     }
 
     /**
-     * @param Block $block
-     * @return Blockchain
+     * @param BlockInterface $block
+     * @return void
      */
-    public function addBlock(Block $block): self
+    public function addBlock(BlockInterface $block): void
     {
+        if (false === $this->mineStrategy->supports($block)) {
+            throw new \InvalidArgumentException(
+                sprintf('Block of type "%s" is not supported by this strategy', get_class($block))
+            );
+        }
+
         $block->setPreviousHash($this->getLatestBlock()->getHash());
 
         if (false === $this->mineStrategy->mine($block)) {
@@ -41,14 +49,12 @@ class Blockchain
         }
 
         $this->chain[] = $block;
-
-        return $this;
     }
 
     /**
-     * @return Block
+     * @return BlockInterface
      */
-    public function getLatestBlock(): Block
+    public function getLatestBlock(): BlockInterface
     {
         return end($this->chain);
     }
@@ -76,13 +82,5 @@ class Blockchain
         }
 
         return true;
-    }
-
-    /**
-     * @return Block
-     */
-    private function createGenesisBlock(): Block
-    {
-        return new Block('This is the genesis block', new \DateTime());
     }
 }

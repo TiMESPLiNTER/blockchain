@@ -1,32 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Timesplinter\Blockchain;
 
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
-final class Block implements BlockInterface
+abstract class Block implements BlockInterface
 {
 
     /**
      * @var string
      */
-    private $hash;
+    protected $hash;
 
     /**
-     * @var string|null
+     * @var null|string
      */
-    private $previousHash;
+    protected $previousHash;
 
     /**
      * @var string
      */
-    private $data;
+    protected $data;
 
     /**
      * @var \DateTime
      */
-    private $timestamp;
+    protected $timestamp;
 
     /**
      * @param string $data
@@ -57,8 +59,9 @@ final class Block implements BlockInterface
 
     /**
      * @param null|string $previousHash
+     * @return void
      */
-    public function setPreviousHash(?string $previousHash)
+    public function setPreviousHash(?string $previousHash): void
     {
         $this->previousHash = $previousHash;
         $this->hash = $this->calculateHash();
@@ -80,8 +83,16 @@ final class Block implements BlockInterface
         return $this->timestamp;
     }
 
-    private function calculateHash()
+    /**
+     * @return string
+     */
+    protected function calculateHash(): string
     {
-        return hash('sha256', $this->data . $this->timestamp->format('c') . $this->previousHash);
+        return hash('sha256', (string) $this);
+    }
+
+    public function __toString(): string
+    {
+        return $this->data . $this->timestamp->format('c') . $this->previousHash;
     }
 }
