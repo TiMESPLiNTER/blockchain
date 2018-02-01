@@ -13,22 +13,22 @@ abstract class Block implements BlockInterface
     /**
      * @var string
      */
-    protected $hash;
+    private $hash;
 
     /**
      * @var null|string
      */
-    protected $previousHash;
+    private $previousHash;
 
     /**
      * @var string
      */
-    protected $data;
+    private $data;
 
     /**
      * @var \DateTime
      */
-    protected $timestamp;
+    private $timestamp;
 
     /**
      * @param string $data
@@ -64,7 +64,7 @@ abstract class Block implements BlockInterface
     public function setPreviousHash(?string $previousHash): void
     {
         $this->previousHash = $previousHash;
-        $this->hash = $this->calculateHash();
+        $this->updateHash();
     }
 
     /**
@@ -86,11 +86,22 @@ abstract class Block implements BlockInterface
     /**
      * @return string
      */
-    protected function calculateHash(): string
+    public function calculateHash(): string
     {
         return hash('sha256', (string) $this);
     }
 
+    /**
+     * @return void
+     */
+    public function updateHash()
+    {
+        $this->hash = $this->calculateHash();
+    }
+
+    /**
+     * @return string
+     */
     public function __toString(): string
     {
         return $this->data . $this->timestamp->format('c') . $this->previousHash;

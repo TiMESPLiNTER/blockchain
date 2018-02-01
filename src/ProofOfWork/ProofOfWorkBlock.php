@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Timesplinter\ProofOfWork\Blockchain;
+namespace Timesplinter\Blockchain\ProofOfWork;
 
 use Timesplinter\Blockchain\Block;
 
@@ -39,7 +39,7 @@ final class ProofOfWorkBlock extends Block implements ProofOfWorkBlockInterface
     public function setNonce(int $nonce): void
     {
         $this->nonce = $nonce;
-        $this->hash = $this->calculateHash();
+        $this->updateHash();
     }
 
     public function __toString(): string

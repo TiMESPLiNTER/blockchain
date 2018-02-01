@@ -8,8 +8,8 @@ namespace Timesplinter\Blockchain;
 interface BlockInterface
 {
     /**
-     * Hash of the block
-     * @return string
+     * Returns the current hash of this block
+     * @return string The hash of the block
      */
     public function getHash(): string;
 
@@ -20,10 +20,23 @@ interface BlockInterface
     public function getPreviousHash(): ?string;
 
     /**
+     * Sets the hash of the previous block and therefor links this block to it
      * @param string $previousHash
      * @return void
      */
     public function setPreviousHash(string $previousHash): void;
+
+    /**
+     * Updates the hash of this block
+     * @return void
+     */
+    public function updateHash();
+
+    /**
+     * Calculates the hash of this block
+     * @return string The calulcated hash for this block
+     */
+    public function calculateHash(): string;
 
     /**
      * A string representation of the block which will be used for calculating its hash
