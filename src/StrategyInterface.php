@@ -14,7 +14,8 @@ interface StrategyInterface
     public function mine(BlockInterface $block): bool;
 
     /**
-     * @return BlockInterface
+     * Returns the first block (genesis block) with which the blockchain gets initialized
+     * @return BlockInterface The genesis block
      */
     public function getGenesisBlock(): BlockInterface;
 
