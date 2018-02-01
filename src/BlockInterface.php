@@ -14,10 +14,22 @@ interface BlockInterface
     public function getHash(): string;
 
     /**
+     * Returns the timestamp of the block
+     * @return \DateTime
+     */
+    public function getTimestamp(): \DateTime;
+
+    /**
      * Hash of the previous block this block is linked to
      * @return null|string
      */
     public function getPreviousHash(): ?string;
+
+    /**
+     * Returns the data stored within this block
+     * @return mixed
+     */
+    public function getData();
 
     /**
      * Sets the hash of the previous block and therefor links this block to it

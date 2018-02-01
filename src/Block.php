@@ -21,9 +21,9 @@ abstract class Block implements BlockInterface
     private $previousHash;
 
     /**
-     * @var string
+     * @var mixed
      */
-    private $data;
+    protected $data;
 
     /**
      * @var \DateTime
@@ -31,10 +31,10 @@ abstract class Block implements BlockInterface
     private $timestamp;
 
     /**
-     * @param string $data
+     * @param mixed $data
      * @param \DateTime $timestamp
      */
-    public function __construct(string $data, \DateTime $timestamp)
+    public function __construct($data, \DateTime $timestamp)
     {
         $this->data = $data;
         $this->timestamp = $timestamp;
@@ -47,6 +47,11 @@ abstract class Block implements BlockInterface
     public function getHash(): string
     {
         return $this->hash;
+    }
+
+    public function getData()
+    {
+        return $this->data;
     }
 
     /**
@@ -65,14 +70,6 @@ abstract class Block implements BlockInterface
     {
         $this->previousHash = $previousHash;
         $this->updateHash();
-    }
-
-    /**
-     * @return string
-     */
-    public function getData(): string
-    {
-        return $this->data;
     }
 
     /**
@@ -104,6 +101,6 @@ abstract class Block implements BlockInterface
      */
     public function __toString(): string
     {
-        return $this->data . $this->timestamp->format('c') . $this->previousHash;
+        return serialize($this->data) . $this->timestamp->format('c') . $this->previousHash;
     }
 }

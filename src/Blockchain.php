@@ -60,6 +60,14 @@ final class Blockchain implements BlockchainInterface
     }
 
     /**
+     * @return array|BlockInterface[]
+     */
+    public function getChain(): array
+    {
+        return $this->chain;
+    }
+
+    /**
      * @return bool
      */
     public function isValid(): bool

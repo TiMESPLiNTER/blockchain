@@ -15,10 +15,10 @@ final class ProofOfWorkBlock extends Block implements ProofOfWorkBlockInterface
     private $nonce;
 
     /**
-     * @param string    $data
+     * @param mixed     $data
      * @param \DateTime $timestamp
      */
-    public function __construct(string $data, \DateTime $timestamp)
+    public function __construct($data, \DateTime $timestamp)
     {
         parent::__construct($data, $timestamp);
 

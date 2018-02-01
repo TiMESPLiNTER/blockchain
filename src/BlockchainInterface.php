@@ -25,4 +25,9 @@ interface BlockchainInterface
      * @return bool
      */
     public function isValid(): bool;
+
+    /**
+     * @return array|BlockInterface[]
+     */
+    public function getChain(): array;
 }
