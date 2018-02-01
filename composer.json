@@ -1,8 +1,18 @@
 {
-    "name": "blockchain-php/blockchain",
+    "name": "timesplinter/blockchain",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Pascal Muenst",
+            "email": "github@timesplinter.ch"
+        }
+    ],
+    "require": {
+        "php": "^7.1"
+    },
     "autoload": {
         "psr-4": {
-            "Blockchain\\": "src/"
+            "Timesplinter\\Blockchain\\": "src/"
         }
     }
 }

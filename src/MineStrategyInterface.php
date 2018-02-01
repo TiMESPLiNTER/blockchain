@@ -1,6 +1,6 @@
 <?php
 
-namespace Blockchain;
+namespace Timesplinter\Blockchain;
 
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>

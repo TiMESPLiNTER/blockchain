@@ -1,10 +1,10 @@
 <?php
 
-namespace Blockchain\Tests;
+namespace Timesplinter\Blockchain\Tests;
 
-use Blockchain\Block;
-use Blockchain\Blockchain;
-use Blockchain\ProofOfWorkMineStrategy;
+use Timesplinter\Blockchain\Block;
+use Timesplinter\Blockchain\Blockchain;
+use Timesplinter\Blockchain\ProofOfWorkMineStrategy;
 
 require __DIR__ . '/../vendor/autoload.php';
 
