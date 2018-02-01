@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Timesplinter\Blockchain\ProofOfWork;
+namespace Timesplinter\Blockchain\Strategy\ProofOfWork;
 
 use Timesplinter\Blockchain\BlockInterface;
 use Timesplinter\Blockchain\StrategyInterface;
