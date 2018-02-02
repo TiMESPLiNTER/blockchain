@@ -46,7 +46,7 @@ interface BlockInterface
 
     /**
      * Calculates the hash of this block
-     * @return string The calulcated hash for this block
+     * @return string The calculated hash for this block
      */
     public function calculateHash(): string;
 

@@ -32,7 +32,7 @@ final class TransactionBlockchain implements BlockchainInterface
     /**
      * @param Transaction $transaction
      * @return bool
-     * @throws \Exception
+     * @throws TransactionSignatureException
      */
     public function addTransaction(Transaction $transaction): bool
     {
@@ -48,7 +48,7 @@ final class TransactionBlockchain implements BlockchainInterface
     /**
      * @param Transaction $transaction
      * @return bool
-     * @throws \Exception
+     * @throws TransactionSignatureException
      */
     public function isTransactionValid(Transaction $transaction): bool
     {

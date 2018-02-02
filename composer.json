@@ -11,6 +11,9 @@
         "php": "^7.1",
         "ionux/phactor": "dev-master"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^7.0"
+    },
     "autoload": {
         "psr-4": {
             "Timesplinter\\Blockchain\\": "src/"

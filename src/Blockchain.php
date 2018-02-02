@@ -17,22 +17,22 @@ final class Blockchain implements BlockchainInterface
     /**
      * @var StrategyInterface
      */
-    private $mineStrategy;
+    private $strategy;
 
     /**
-     * @param StrategyInterface $mineStrategy
+     * @param StrategyInterface $strategy
      * @param BlockInterface    $genesisBlock
      */
-    public function __construct(StrategyInterface $mineStrategy, BlockInterface $genesisBlock)
+    public function __construct(StrategyInterface $strategy, BlockInterface $genesisBlock)
     {
-        if (false === $mineStrategy->supports($genesisBlock)) {
+        if (false === $strategy->supports($genesisBlock)) {
             throw new \InvalidArgumentException(
                 sprintf('Genesis block of type "%s" is not a valid type one for this chain', get_class($genesisBlock))
             );
         }
 
-        $this->mineStrategy = $mineStrategy;
-        $this->chain = [$genesisBlock];
+        $this->strategy = $strategy;
+        $this->chain    = [$genesisBlock];
     }
 
     /**
@@ -41,7 +41,7 @@ final class Blockchain implements BlockchainInterface
      */
     public function addBlock(BlockInterface $block): void
     {
-        if (false === $this->mineStrategy->supports($block)) {
+        if (false === $this->strategy->supports($block)) {
             throw new \InvalidArgumentException(
                 sprintf('Block of type "%s" is not supported by this strategy', get_class($block))
             );
@@ -49,7 +49,7 @@ final class Blockchain implements BlockchainInterface
 
         $block->setPreviousHash($this->getLatestBlock()->getHash());
 
-        if (false === $this->mineStrategy->mine($block)) {
+        if (false === $this->strategy->mine($block)) {
             throw new \RuntimeException(
                 sprintf('Could not mine block with hash "%s"', $block->getHash())
             );
@@ -72,6 +72,10 @@ final class Blockchain implements BlockchainInterface
     public function isValid(): bool
     {
         $chainLength = count($this->chain);
+
+        if ($this->chain[0]->getHash() !== $this->chain[0]->calculateHash()) {
+            return false;
+        }
 
         for ($i = 1; $i < $chainLength; ++$i) {
             $block = $this->chain[$i];

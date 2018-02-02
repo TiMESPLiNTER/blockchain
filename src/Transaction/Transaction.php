@@ -50,16 +50,20 @@ class Transaction implements \JsonSerializable
     /**
      * @param string $privateKey
      * @return void
-     * @throws \Exception
+     * @throws TransactionSignatureException
      */
     public function sign(string $privateKey): void
     {
-        $this->signature = (new Signature())->Generate(json_encode($this), $privateKey);
+        try {
+            $this->signature = (new Signature())->Generate(json_encode($this), $privateKey);
+        } catch (\Exception $e) {
+            throw new TransactionSignatureException('Could not sign transaction', 0, $e);
+        }
     }
 
     /**
      * @return bool
-     * @throws \Exception
+     * @throws TransactionSignatureException
      */
     public function isSignatureValid(): bool
     {
@@ -67,7 +71,11 @@ class Transaction implements \JsonSerializable
             return false;
         }
 
-        return (new Signature())->Verify($this->signature, json_encode($this), $this->getFrom());
+        try {
+            return (new Signature())->Verify($this->signature, json_encode($this), $this->getFrom());
+        } catch (\Exception $e) {
+            throw new TransactionSignatureException('Could not verify transaction signature', 0, $e);
+        }
     }
 
     /**
