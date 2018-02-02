@@ -8,8 +8,7 @@
         }
     ],
     "require": {
-        "php": "^7.1",
-        "ionux/phactor": "dev-master@dev"
+        "php": "^7.1"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.0"
@@ -17,14 +16,6 @@
     "autoload": {
         "psr-4": {
             "Timesplinter\\Blockchain\\": "src/"
-        }
-    },
-    "extra": {
-        "patches": {
-            "ionux/phactor": {
-                "PHP 7.2": "https://patch-diff.githubusercontent.com/raw/ionux/phactor/pull/8.patch",
-                "Fix parseCompressedPublicKey": "https://patch-diff.githubusercontent.com/raw/ionux/phactor/pull/10.patch"
-            }
         }
     }
 }
