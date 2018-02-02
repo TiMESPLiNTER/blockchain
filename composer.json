@@ -9,7 +9,7 @@
     ],
     "require": {
         "php": "^7.1",
-        "ionux/phactor": "dev-master"
+        "ionux/phactor": "dev-master@dev"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.0"
