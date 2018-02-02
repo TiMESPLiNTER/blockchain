@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Transaction;
 
 use Timesplinter\Blockchain\BlockchainInterface;
+use Timesplinter\Blockchain\BlockchainIterator;
 use Timesplinter\Blockchain\BlockInterface;
-use Traversable;
 
-final class TransactionPool implements BlockchainInterface
+final class TransactionBlockchain implements BlockchainInterface
 {
 
     /**
@@ -32,6 +32,7 @@ final class TransactionPool implements BlockchainInterface
     /**
      * @param Transaction $transaction
      * @return bool
+     * @throws \Exception
      */
     public function addTransaction(Transaction $transaction): bool
     {
@@ -47,9 +48,14 @@ final class TransactionPool implements BlockchainInterface
     /**
      * @param Transaction $transaction
      * @return bool
+     * @throws \Exception
      */
     public function isTransactionValid(Transaction $transaction): bool
     {
+        if (false === $transaction->isSignatureValid()) {
+            return false;
+        }
+
         $balanceOfSender = $this->getBalanceForAddress($transaction->getFrom());
 
         return $balanceOfSender >= $transaction->getAmount();
@@ -141,13 +147,9 @@ final class TransactionPool implements BlockchainInterface
     }
 
     /**
-     * Retrieve an external iterator
-     * @link http://php.net/manual/en/iteratoraggregate.getiterator.php
-     * @return Traversable An instance of an object implementing <b>Iterator</b> or
-     * <b>Traversable</b>
-     * @since 5.0.0
+     * @return BlockchainIterator
      */
-    public function getIterator()
+    public function getIterator(): BlockchainIterator
     {
         return $this->blockchain->getIterator();
     }

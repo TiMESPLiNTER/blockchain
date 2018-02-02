@@ -21,11 +21,18 @@ final class Blockchain implements BlockchainInterface
 
     /**
      * @param StrategyInterface $mineStrategy
+     * @param BlockInterface    $genesisBlock
      */
-    public function __construct(StrategyInterface $mineStrategy)
+    public function __construct(StrategyInterface $mineStrategy, BlockInterface $genesisBlock)
     {
+        if (false === $mineStrategy->supports($genesisBlock)) {
+            throw new \InvalidArgumentException(
+                sprintf('Genesis block of type "%s" is not a valid type one for this chain', get_class($genesisBlock))
+            );
+        }
+
         $this->mineStrategy = $mineStrategy;
-        $this->chain = [$mineStrategy->getGenesisBlock()];
+        $this->chain = [$genesisBlock];
     }
 
     /**
@@ -60,14 +67,6 @@ final class Blockchain implements BlockchainInterface
     }
 
     /**
-     * @return array|BlockInterface[]
-     */
-    public function getChain(): array
-    {
-        return $this->chain;
-    }
-
-    /**
      * @return bool
      */
     public function isValid(): bool
@@ -90,5 +89,13 @@ final class Blockchain implements BlockchainInterface
         }
 
         return true;
+    }
+
+    /**
+     * @return BlockchainIterator
+     */
+    public function getIterator(): BlockchainIterator
+    {
+        return new BlockchainIterator($this->chain);
     }
 }

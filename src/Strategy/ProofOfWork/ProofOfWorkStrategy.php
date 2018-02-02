@@ -49,12 +49,4 @@ final class ProofOfWorkStrategy implements StrategyInterface
     {
         return $block instanceof ProofOfWorkBlockInterface;
     }
-
-    /**
-     * @return BlockInterface
-     */
-    public function getGenesisBlock(): BlockInterface
-    {
-        return new ProofOfWorkBlock('This is the genesis block', new \DateTime('1970-01-01'));
-    }
 }

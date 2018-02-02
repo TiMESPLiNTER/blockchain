@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain\Transaction;
 
+use Phactor\Signature;
+
 class Transaction implements \JsonSerializable
 {
 
@@ -28,6 +30,11 @@ class Transaction implements \JsonSerializable
     private $timestamp;
 
     /**
+     * @var string
+     */
+    private $signature;
+
+    /**
      * @param string $from
      * @param string $to
      * @param float  $amount
@@ -38,6 +45,29 @@ class Transaction implements \JsonSerializable
         $this->to     = $to;
         $this->amount = $amount;
         $this->timestamp = new \DateTime();
+    }
+
+    /**
+     * @param string $privateKey
+     * @return void
+     * @throws \Exception
+     */
+    public function sign(string $privateKey): void
+    {
+        $this->signature = (new Signature())->Generate(json_encode($this), $privateKey);
+    }
+
+    /**
+     * @return bool
+     * @throws \Exception
+     */
+    public function isSignatureValid(): bool
+    {
+        if (null === $this->signature) {
+            return false;
+        }
+
+        return (new Signature())->Verify($this->signature, json_encode($this), $this->getFrom());
     }
 
     /**
@@ -73,11 +103,15 @@ class Transaction implements \JsonSerializable
     }
 
     /**
-     * Specify data which should be serialized to JSON
-     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
-     * @return mixed data which can be serialized by <b>json_encode</b>,
-     * which is a value of any type other than a resource.
-     * @since 5.4.0
+     * @return null|string
+     */
+    public function getSignature(): ?string
+    {
+        return $this->signature;
+    }
+
+    /**
+     * @return array
      */
     public function jsonSerialize()
     {

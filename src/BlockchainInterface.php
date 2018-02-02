@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain;
 
-interface BlockchainInterface
+interface BlockchainInterface extends \IteratorAggregate
 {
 
     /**
@@ -27,7 +27,7 @@ interface BlockchainInterface
     public function isValid(): bool;
 
     /**
-     * @return array|BlockInterface[]
+     * @return BlockchainIterator
      */
-    public function getChain(): array;
+    public function getIterator(): BlockchainIterator;
 }

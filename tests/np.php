@@ -4,11 +4,15 @@ namespace Timesplinter\Blockchain\Tests;
 
 use Timesplinter\Blockchain\Blockchain;
 use Timesplinter\Blockchain\Strategy\NoProof\NoProofBlock as Block;
+use Timesplinter\Blockchain\Strategy\NoProof\NoProofBlock;
 use Timesplinter\Blockchain\Strategy\NoProof\NoProofStrategy;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$blockchain = new Blockchain(new NoProofStrategy());
+$blockchain = new Blockchain(
+    new NoProofStrategy(),
+    new Block('This is the genesis block', new \DateTime('1970-01-01'))
+);
 
 $start = microtime(true);
 

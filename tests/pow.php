@@ -8,7 +8,10 @@ use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkStrategy;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$blockchain = new Blockchain(new ProofOfWorkStrategy(5));
+$blockchain = new Blockchain(
+    new ProofOfWorkStrategy(5),
+    new Block('This is the genesis block', new \DateTime('1970-01-01'))
+);
 
 $start = microtime(true);
 

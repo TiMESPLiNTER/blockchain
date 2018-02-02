@@ -14,12 +14,6 @@ interface StrategyInterface
     public function mine(BlockInterface $block): bool;
 
     /**
-     * Returns the first block (genesis block) with which the blockchain gets initialized
-     * @return BlockInterface The genesis block
-     */
-    public function getGenesisBlock(): BlockInterface;
-
-    /**
      * @param BlockInterface $block The block to be checked
      * @return bool True if block type is supported otherwise false
      */

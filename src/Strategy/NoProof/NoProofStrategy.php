@@ -20,14 +20,6 @@ final class NoProofStrategy implements StrategyInterface
     }
 
     /**
-     * @return BlockInterface
-     */
-    public function getGenesisBlock(): BlockInterface
-    {
-        return new NoProofBlock('This is the genesis block', new \DateTime('1970-01-01'));
-    }
-
-    /**
      * @param BlockInterface $block The block to be checked
      * @return bool True if block type is supported otherwise false
      */
