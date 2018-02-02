@@ -38,7 +38,7 @@ abstract class Block implements BlockInterface
     {
         $this->data = $data;
         $this->timestamp = $timestamp;
-        $this->hash = $this->calculateHash();
+        $this->updateHash();
     }
 
     /**
