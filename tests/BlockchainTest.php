@@ -14,7 +14,7 @@ use Timesplinter\Blockchain\StrategyInterface;
 /**
  * @covers \Timesplinter\Blockchain\Blockchain
  */
-class BlockchainTest extends TestCase
+final class BlockchainTest extends TestCase
 {
     public function testInitialBlockchainLengthIsOneAndContainsTheGenesisBlock()
     {
