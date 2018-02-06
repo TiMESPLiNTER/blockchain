@@ -16,6 +16,10 @@ build:
       environment:
         php: 7.2
 
+    phpNightly:
+      environment:
+        php: master
+
 checks:
   php:
     code_rating: true
