@@ -1,5 +1,7 @@
 # Blockchain
 
+[![Build Status](https://travis-ci.org/TiMESPLiNTER/blockchain.svg?branch=master)](https://travis-ci.org/TiMESPLiNTER/blockchain) [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/TiMESPLiNTER/proxy-mock/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/TiMESPLiNTER/blockchain/?branch=master)
+
 ## Strategies
 
 ### No proof
