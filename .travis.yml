@@ -1,0 +1,9 @@
+language: php
+php:
+  - 7.1
+  - 7.2
+  - hhvm
+script: ./vendor/bin/phpunit --coverage-text
+install:
+    - composer self-update
+    - composer update --prefer-dist
