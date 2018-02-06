@@ -5,8 +5,8 @@ php:
   - nightly
 script: ./vendor/bin/phpunit --coverage-text
 install:
-    - composer self-update
-    - composer update --prefer-dist
+  - composer self-update
+  - composer update --prefer-dist
 matrix:
   fast_finish: true
   allow_failures:
