@@ -2,28 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Timesplinter\Blockchain;
+namespace Timesplinter\Blockchain\Storage;
 
-final class BlockchainIterator implements \SeekableIterator
+use Timesplinter\Blockchain\BlockInterface;
+use Timesplinter\Blockchain\Storage\StorageInterface;
+
+abstract class AbstractStorage implements StorageInterface
 {
-
-    /**
-     * @var array
-     */
-    private $chain;
 
     /**
      * @var int
      */
-    private $position;
-
-    /**
-     * @param array $chain
-     */
-    public function __construct(array $chain)
-    {
-        $this->chain = $chain;
-    }
+    protected $position = 0;
 
     /**
      * Return the current element
@@ -33,7 +23,19 @@ final class BlockchainIterator implements \SeekableIterator
      */
     public function current()
     {
-        return $this->chain[$this->position];
+        return $this->getBlock($this->position);
+    }
+
+    /**
+     * Checks if current position is valid
+     * @link http://php.net/manual/en/iterator.valid.php
+     * @return boolean The return value will be casted to boolean and then evaluated.
+     * Returns true on success or false on failure.
+     * @since 5.0.0
+     */
+    public function valid()
+    {
+        return $this->isPositionValid($this->position);
     }
 
     /**
@@ -59,18 +61,6 @@ final class BlockchainIterator implements \SeekableIterator
     }
 
     /**
-     * Checks if current position is valid
-     * @link http://php.net/manual/en/iterator.valid.php
-     * @return boolean The return value will be casted to boolean and then evaluated.
-     * Returns true on success or false on failure.
-     * @since 5.0.0
-     */
-    public function valid()
-    {
-        return isset($this->chain[$this->position]);
-    }
-
-    /**
      * Rewind the Iterator to the first element
      * @link http://php.net/manual/en/iterator.rewind.php
      * @return void Any returned value is ignored.
@@ -92,10 +82,16 @@ final class BlockchainIterator implements \SeekableIterator
      */
     public function seek($position)
     {
-        if (!isset($this->array[$position])) {
-            throw new \OutOfBoundsException(sprintf('Invalid blockchain position (%d)', $position));
+        if (false === $this->isPositionValid($position)) {
+            throw new \OutOfBoundsException(sprintf('Invalid position (%d)', $position));
         }
 
         $this->position = $position;
     }
+
+    /**
+     * @param int $position
+     * @return bool
+     */
+    abstract protected function isPositionValid(int $position): bool;
 }

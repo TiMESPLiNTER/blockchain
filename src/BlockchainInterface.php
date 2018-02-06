@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain;
 
-interface BlockchainInterface extends \IteratorAggregate
+use Timesplinter\Blockchain\Storage\StorageInterface;
+
+interface BlockchainInterface extends \IteratorAggregate, \Countable
 {
 
     /**
@@ -21,13 +23,22 @@ interface BlockchainInterface extends \IteratorAggregate
     public function getLatestBlock(): BlockInterface;
 
     /**
+     * Returns the block at the specified position
+     * @param int $position
+     * @return BlockInterface
+     * @throws \OutOfBoundsException
+     */
+    public function getBlock(int $position): BlockInterface;
+
+    /**
      * Checks if the blockchain is in a valid state
      * @return bool
      */
     public function isValid(): bool;
 
     /**
-     * @return BlockchainIterator
+     * Returns an iterator to iterate over the blocks in this blockchain
+     * @return StorageInterface
      */
-    public function getIterator(): BlockchainIterator;
+    public function getIterator(): StorageInterface;
 }

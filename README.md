@@ -6,8 +6,18 @@
 
 ### No proof
 
-This strategy enables a client to push new blocks the blockchain effortlessly.
+This strategy enables a client to push new blocks to the blockchain effortlessly.
 
 ### Proof of Work (PoW)
 
 This strategy requires solving a mathematical problem before a block can be pushed to the blockchain.
+
+## Storage
+
+### InMemory
+
+Blocks are stored in a PHP array and are gone after script execution ends.
+
+### File
+
+Blocks are stored permanently in a file and are available even after script execution ends.

@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain;
 
+use Timesplinter\Blockchain\Storage\StorageInterface;
+
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
 final class Blockchain implements BlockchainInterface
 {
-    /**
-     * @var array|BlockInterface[]
-     */
-    private $chain;
 
     /**
      * @var StrategyInterface
@@ -20,10 +18,16 @@ final class Blockchain implements BlockchainInterface
     private $strategy;
 
     /**
-     * @param StrategyInterface $strategy
-     * @param BlockInterface    $genesisBlock
+     * @var StorageInterface
      */
-    public function __construct(StrategyInterface $strategy, BlockInterface $genesisBlock)
+    private $storage;
+
+    /**
+     * @param StrategyInterface $strategy
+     * @param StorageInterface $storage
+     * @param BlockInterface $genesisBlock
+     */
+    public function __construct(StrategyInterface $strategy, StorageInterface $storage, BlockInterface $genesisBlock)
     {
         if (false === $strategy->supports($genesisBlock)) {
             throw new \InvalidArgumentException(
@@ -32,7 +36,8 @@ final class Blockchain implements BlockchainInterface
         }
 
         $this->strategy = $strategy;
-        $this->chain    = [$genesisBlock];
+        $this->storage  = $storage;
+        $this->storage->addBlock($genesisBlock);
     }
 
     /**
@@ -55,7 +60,7 @@ final class Blockchain implements BlockchainInterface
             );
         }
 
-        $this->chain[] = $block;
+        $this->storage->addBlock($block);
     }
 
     /**
@@ -63,28 +68,31 @@ final class Blockchain implements BlockchainInterface
      */
     public function getLatestBlock(): BlockInterface
     {
-        return end($this->chain);
+        return $this->storage->getLatestBlock();
     }
 
     /**
+     * Checks if the blockchain is in a valid state
      * @return bool
      */
     public function isValid(): bool
     {
-        $chainLength = count($this->chain);
+        $chainLength = count($this->storage);
 
-        if ($this->chain[0]->getHash() !== $this->chain[0]->calculateHash()) {
-            return false;
-        }
-
-        for ($i = 1; $i < $chainLength; ++$i) {
-            $block = $this->chain[$i];
-            $previousBlock = $this->chain[$i-1];
+        for ($i = 0; $i < $chainLength; ++$i) {
+            $block = $this->storage->getBlock($i);
 
             // Block has been tempered
             if ($block->getHash() !== $block->calculateHash()) {
                 return false;
             }
+
+            // Skip checking link to previous block for genesis block
+            if (0 === $i) {
+                continue;
+            }
+
+            $previousBlock = $this->storage->getBlock($i-1);
 
             // Block is not linked to previous block
             if ($block->getPreviousHash() !== $previousBlock->getHash()) {
@@ -96,10 +104,31 @@ final class Blockchain implements BlockchainInterface
     }
 
     /**
-     * @return BlockchainIterator
+     * Returns an iterator to iterate over the blocks in this blockchain
+     * @return StorageInterface
      */
-    public function getIterator(): BlockchainIterator
+    public function getIterator(): StorageInterface
     {
-        return new BlockchainIterator($this->chain);
+        return $this->storage;
+    }
+
+    /**
+     * Returns the total number of blocks currently in the blockchain
+     * @return int Number of blocks within this chain
+     */
+    public function count()
+    {
+        return $this->storage->count();
+    }
+
+    /**
+     * Returns the block at the specified position
+     * @param int $position
+     * @return BlockInterface
+     * @throws \OutOfBoundsException
+     */
+    public function getBlock(int $position): BlockInterface
+    {
+        return $this->storage->getBlock($position);
     }
 }
