@@ -96,9 +96,7 @@ class Peer implements PeerInterface
         try {
             $this->writePacketData('PING');
 
-            var_dump($this->getAddress(), $this->readPacketData());
-
-            return true;
+            return 'PONG' === $this->readPacketData();
         } catch (\Exception $e) {
             ++$this->failures;
             echo $e->getMessage();
@@ -125,6 +123,8 @@ class Peer implements PeerInterface
             return $this->socket->getPeerName();
         } catch (Exception $e) {
             ++$this->failures;
+
+            throw $e;
         }
     }
 

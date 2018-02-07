@@ -62,9 +62,9 @@ $logger = new class($showLevels) implements LoggerInterface {
 
     public function log($level, $message, array $context = [])
     {
-        /*if (false === in_array($level, $this->levels, true)) {
+        if (false === in_array($level, $this->levels, true)) {
             return;
-        }*/
+        }
 
         printf(date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
     }

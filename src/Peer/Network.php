@@ -84,8 +84,6 @@ class Network
             $this->collectNewClients();
 
             $this->handleClients();
-
-            usleep(5000);
         }
     }
 
@@ -200,14 +198,14 @@ class Network
 
     /**
      * Removes known peers which aren't alive anymore and adds new peers of alive peers
-     * @param array|PeerInterface[] $peers The peers to be discovered
+     * @param array|Peer[] $peers The peers to be discovered
      */
     private function recursiveDiscover(array $peers)
     {
         foreach ($peers as $i => $peer) {
             $known = in_array($peer, $this->peers, true);
             $alive = $peer->alive();
-var_dump($peer->getAddress(), $alive);
+var_dump($peer->getAddress(), $alive, $peer->getFailures());
             if (true === $known && false === $alive) {
                 // Known peer but it's dead -> remove it
                 unset($this->peers[$i]);
