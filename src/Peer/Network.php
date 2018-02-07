@@ -23,10 +23,16 @@ class Network
     private $ownPeer;
 
     /**
-     * Discovers new peers
+     * Discovers new peers and remove dead ones
      */
     public function discover()
     {
+        foreach ($this->peers as $i => $peer) {
+            if (false === $peer->alive()) {
+                unset($this->peers[$i]);
+            }
+        }
+
         $this->recursiveDiscover($this->peers);
     }
 
@@ -66,6 +72,11 @@ class Network
                 if (false === $known) {
                     // Alive peer and unknown -> add it
                     $this->peers[] = $peer;
+
+                    if (count($this->peers) >= self::PEERS_MAX) {
+                        // Stop looking for more peers as we reached max
+                        break;
+                    }
                 }
 
                 // Discover all peers of that new peer
