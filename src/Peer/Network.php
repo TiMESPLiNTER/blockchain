@@ -18,6 +18,8 @@ class Network
 
     const PEERS_MAX = 1000;
 
+    const PACKET_SEPARATOR = "\0";
+
     /**
      * @var array|Peer[]
      */
@@ -39,7 +41,7 @@ class Network
     private $sock;
 
     /**
-     * @var array|Socket[]
+     * @var array|Client[]
      */
     private $clients = [];
 
@@ -110,31 +112,29 @@ class Network
             return;
         }
 
-        $client = $this->sock->accept();
-        $client->setBlocking(false);
-        $client->setOption(SOL_SOCKET, SO_KEEPALIVE, 1);
+        $clientSocket = $this->sock->accept();
 
-        $this->clients[] = $client;
+        $this->clients[] = Client::fromSocket($clientSocket);
     }
 
     private function handleClients()
     {
         foreach ($this->clients as $client) {
-            $this->logger->debug('Start reading from client: ' . $client->getPeerName());
+            $this->logger->debug('Start reading from client: ' . $client->getSocket()->getPeerName());
 
-            if ('' === $data = $client->read(1024)) {
-                return;
+            if (null === $packetData = $client->readPacketData(self::PACKET_SEPARATOR)) {
+                continue;
             }
 
-            $this->logger->info($client->getPeerName() . ': ' . $data);
+            $this->logger->info($client->getSocket()->getPeerName() . ': ' . $packetData);
 
-            if ("PING\n" === $data) {
-                $client->write("PONG\n");
+            if ('PING' === $packetData) {
+                $client->getSocket()->write('PONG' . self::PACKET_SEPARATOR);
             } else {
-                $client->write("UNKNOWN\n");
+                $client->getSocket()->write('UNKNOWN' . self::PACKET_SEPARATOR);
             }
 
-            $this->logger->debug('End reading from client: ' . $client->getPeerName());
+            $this->logger->debug('End reading from client: ' . $client->getSocket()->getPeerName());
         }
     }
 

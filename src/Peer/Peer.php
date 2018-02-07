@@ -65,7 +65,6 @@ class Peer implements PeerInterface
         } catch (\Exception $e) {
             echo $e->getMessage();
             echo $e->getTraceAsString();
-            exit;
             return false;
         }
     }
@@ -78,7 +77,7 @@ class Peer implements PeerInterface
             try {
                 $socket = $this->getSocket();
 
-                return $socket->write($command . "\n");
+                return $socket->write($command . Network::PACKET_SEPARATOR);
             } catch (Exception $e) {
                 if ($retries < 10 && ($e->getCode() === SOCKET_EAGAIN || $e->getCode() === SOCKET_EWOULDBLOCK)) {
                     ++$retries;
