@@ -4,25 +4,93 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain\Examples;
 
+use Psr\Log\LoggerInterface;
 use Timesplinter\Blockchain\Peer\Network;
 
 require __DIR__ .'/../vendor/autoload.php';
 
-$network = new Network();
-$network->bind();
+$showLevels = ['emergency', 'alert', 'error', 'critical', 'warning', 'info'];
 
-while (true) {
-    echo 'Start discovering...' , PHP_EOL;
+$logger = new class($showLevels) implements LoggerInterface {
 
-    // Clean up dead and check for new peers
-    $network->discover();
+    private $levels;
 
-    echo 'Finished discovering.' , PHP_EOL;
-    echo 'Peers: ' , count($network->getPeers()) , PHP_EOL;
-
-    foreach ($network->getPeers() as $peer) {
-        echo $peer->getAddress() , PHP_EOL;
+    public function __construct(array $levels)
+    {
+        $this->levels = $levels;
     }
 
-    echo '---' , PHP_EOL;
+    public function emergency($message, array $context = [])
+    {
+        $this->log('emergency', $message);
+    }
+
+    public function alert($message, array $context = [])
+    {
+        $this->log('alert', $message);
+    }
+
+    public function critical($message, array $context = [])
+    {
+        $this->log('critical', $message);
+    }
+
+    public function error($message, array $context = [])
+    {
+        $this->log('error', $message);
+    }
+
+    public function warning($message, array $context = [])
+    {
+        $this->log('warning', $message);
+    }
+
+    public function notice($message, array $context = [])
+    {
+        $this->log('notice', $message);
+    }
+
+    public function info($message, array $context = [])
+    {
+        $this->log('info', $message);
+    }
+
+    public function debug($message, array $context = [])
+    {
+        $this->log('debug', $message);
+    }
+
+    public function log($level, $message, array $context = [])
+    {
+        /*if (false === in_array($level, $this->levels, true)) {
+            return;
+        }*/
+
+        printf(date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
+    }
+};
+
+if (false === isset($argv[1])) {
+    echo 'Please provide a port to run.' , PHP_EOL;
+    exit;
+} else {
+    $port = (int) $argv[1];
 }
+
+$initialPeers = [];
+
+if (true === isset($argv[2])) {
+    $initialPeers = array_map(
+        function ($peerAddress) {
+            return trim($peerAddress);
+        },
+        explode(',', $argv[2])
+    );
+}
+
+ob_implicit_flush();
+
+$network = new Network($port, $initialPeers, $logger);
+$network->run();
+
+//$network->stop();
