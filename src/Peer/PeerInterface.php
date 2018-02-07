@@ -12,9 +12,9 @@ interface PeerInterface
 
     /**
      * Returns the (IP) address through which this peer is reachable
-     * @return PeerAddress
+     * @return string
      */
-    public function getAddress(): PeerAddress;
+    public function getAddress(): string;
 
     /**
      * Checks if this peer is still alive

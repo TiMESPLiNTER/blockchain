@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Peer;
 
 use Psr\Log\LoggerInterface;
+use Socket\Raw\Exception;
 use Socket\Raw\Factory;
 use Socket\Raw\Socket;
 
@@ -26,9 +27,9 @@ class Network
     private $peers = [];
 
     /**
-     * @var PeerInterface
+     * @var PeerAddress
      */
-    private $ownPeer;
+    private $ownAddress;
 
     /**
      * @var LoggerInterface
@@ -41,7 +42,7 @@ class Network
     private $sock;
 
     /**
-     * @var array|Client[]
+     * @var array|Peer[]
      */
     private $clients = [];
 
@@ -56,10 +57,10 @@ class Network
         $ownIpAddress = '127.0.0.1';
 
         $this->logger = $logger;
-        $this->ownPeer = new Peer(new PeerAddress($ownIpAddress, $port));
+        $this->ownAddress = new PeerAddress($ownIpAddress, $port);
 
         foreach ($initialPeerAddresses as $initialPeerAddress) {
-            $initialPeer = new Peer(PeerAddress::fromString($initialPeerAddress));
+            $initialPeer = Peer::fromAddress((string) PeerAddress::fromString($initialPeerAddress));
 
             $this->peers[] = $initialPeer;
         }
@@ -114,27 +115,36 @@ class Network
 
         $clientSocket = $this->sock->accept();
 
-        $this->clients[] = Client::fromSocket($clientSocket);
+        $this->clients[$clientSocket->getPeerName()] = Peer::fromSocket($clientSocket);
     }
 
     private function handleClients()
     {
-        foreach ($this->clients as $client) {
-            $this->logger->debug('Start reading from client: ' . $client->getSocket()->getPeerName());
+        foreach ($this->clients as $address => $client) {
+            try {
+                $this->logger->debug('Start reading from client: ' . $client->getAddress());
 
-            if (null === $packetData = $client->readPacketData(self::PACKET_SEPARATOR)) {
+                if(null === $packetData = $client->readPacketData()) {
+                    continue;
+                }
+
+                $this->logger->info($client->getAddress() . ': ' . $packetData);
+
+                if('PING' === $packetData) {
+                    $client->writePacketData('PONG');
+                } else {
+                    $client->writePacketData('UNKNOWN');
+                }
+
+                $this->logger->debug('End reading from client: ' . $client->getAddress());
+            } catch (Exception $e) {
+                if ($client->getFailures() >= 10) {
+                    unset($this->clients[$address]);
+                    $this->logger->notice(sprintf('Kicked error prone client: %s', $address));
+                }
+
                 continue;
             }
-
-            $this->logger->info($client->getSocket()->getPeerName() . ': ' . $packetData);
-
-            if ('PING' === $packetData) {
-                $client->getSocket()->write('PONG' . self::PACKET_SEPARATOR);
-            } else {
-                $client->getSocket()->write('UNKNOWN' . self::PACKET_SEPARATOR);
-            }
-
-            $this->logger->debug('End reading from client: ' . $client->getSocket()->getPeerName());
         }
     }
 
@@ -147,15 +157,15 @@ class Network
 
         try {
             // create a TCP/IP stream connection socket server on port 1337
-            $this->sock = $factory->createServer('tcp://' . (string) $this->ownPeer->getAddress());
+            $this->sock = $factory->createServer('tcp://' . (string) $this->ownAddress);
             $this->sock->setBlocking(false);
 
-            $this->logger->info(sprintf('Listening on %s', (string) $this->ownPeer->getAddress()));
+            $this->logger->info(sprintf('Listening on %s', (string) $this->ownAddress));
 
             return true;
         } catch (\Exception $e) {
             $this->logger->critical(
-                sprintf('Could not start listening on "%s": %s', (string) $this->ownPeer->getAddress(), $e->getMessage())
+                sprintf('Could not start listening on "%s": %s', (string) $this->ownAddress, $e->getMessage())
             );
         }
 
@@ -172,7 +182,7 @@ class Network
         }
 
         $this->sock->close();
-        $this->logger->info(sprintf('Stop listening on %s', (string) $this->ownPeer->getAddress()));
+        $this->logger->info(sprintf('Stop listening on %s', (string) $this->ownAddress));
     }
 
     /**
@@ -201,7 +211,7 @@ var_dump($peer->getAddress(), $alive);
             if (true === $known && false === $alive) {
                 // Known peer but it's dead -> remove it
                 unset($this->peers[$i]);
-                $this->logger->notice(sprintf('Remove existing peer (%s): dead', (string) $peer->getAddress()));
+                $this->logger->notice(sprintf('Remove existing peer (%s): dead', $peer->getAddress()));
                 continue;
             }
 
@@ -209,7 +219,7 @@ var_dump($peer->getAddress(), $alive);
                 if (false === $known) {
                     // Alive peer and unknown -> add it
                     $this->peers[] = $peer;
-                    $this->logger->notice(sprintf('New peer added (%s)', (string) $peer->getAddress()));
+                    $this->logger->notice(sprintf('New peer added (%s)', $peer->getAddress()));
 
                     if (count($this->peers) >= self::PEERS_MAX) {
                         // Stop looking for more peers as we reached max
@@ -218,7 +228,7 @@ var_dump($peer->getAddress(), $alive);
                 }
 
                 // Discover all peers of that new peer
-                $this->logger->debug(sprintf('Discovering peers of %s', (string) $peer->getAddress()));
+                $this->logger->debug(sprintf('Discovering peers of %s', $peer->getAddress()));
                 $this->recursiveDiscover($peer->getPeers());
             }
         }
