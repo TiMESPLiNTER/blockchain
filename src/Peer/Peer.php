@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Peer;
 
 use Socket\Raw\Exception;
-use Socket\Raw\Factory;
 use Socket\Raw\Socket;
 
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
-class Peer implements PeerInterface
+class Peer
 {
+
+    const PACKET_SEPARATOR = "\0";
 
     /**
      * @var Socket
@@ -20,89 +21,173 @@ class Peer implements PeerInterface
     private $socket;
 
     /**
+     * @var PeerAddress|null
+     */
+    private $connectionDetails = null;
+
+    /**
+     * @var string
+     */
+    private $buffer = '';
+
+    /**
+     * Pending requests from this node to the client
+     * @var array|Request[]
+     */
+    private $nodeRequestStack = [];
+
+    /**
+     * Pending responses from this node to the client
+     * @var array|Response[]
+     */
+    private $nodeResponseStack = [];
+
+    /**
      * @var int
      */
     private $failures = 0;
 
     /**
-     * @var string
+     * @var Node
      */
-    private $buffer;
+    private $node;
 
-    private function __construct(Socket $socket)
+    /**
+     * BufferedSocket constructor.
+     * @param Socket $socket
+     * @param Node $node
+     */
+    public function __construct(Socket $socket, Node $node)
     {
+        $this->node = $node;
         $this->socket = $socket;
+        $this->socket->setBlocking(false);
     }
 
-    public static function fromSocket(Socket $socket): self
+    private function read(string $separator): ?string
     {
-        return new self($socket);
-    }
+        // @todo if buffer still contains *whole* packets don't read again but deliver next packet here
+        // we have to do this because else we run into an endless loop cause the socket will
+        // never give us something to read again or the other end waits forever (maybe...)
+        if (false === $this->socket->selectRead()) {
+            //echo 'Blocked for read. buffer: ' , $this->buffer , PHP_EOL;
+            return null;
+        }
 
-    public static function fromAddress(string $address): self
-    {
-        $socket = (new Factory())->createClient($address);
+        $this->buffer .= $this->socket->read(1024);
 
-        return new self($socket);
+        if (false === ($pos = strpos($this->buffer, $separator)) || 0 === $pos) {
+            return null;
+        }
+
+        $splittedBuffer = explode($separator, $this->buffer);
+
+        array_filter($splittedBuffer);
+        $data = array_shift($splittedBuffer);
+
+        $this->buffer .= implode($separator, $splittedBuffer);
+
+        return $data;
     }
 
     /**
-     * @return null|string The packet data if there is one else null
+     * @return void
      */
-    public function readPacketData(): ?string
+    public function handle(): void
     {
-        try {
-            $splittedBuffer = explode(Network::PACKET_SEPARATOR, $this->buffer .= $this->socket->read(4096));
-
-            // Clear out empty blocks
-            array_filter($splittedBuffer);
-
-            $this->failures = 0;
-
-            if (count($splittedBuffer) <= 1) {
-                return null;
+        foreach ($this->nodeRequestStack + $this->nodeResponseStack as $request) {
+            if (false === $request instanceof \JsonSerializable) {
+                throw new \RuntimeException('Requests and responses have to implement the JsonSerializable interface');
             }
 
-            $packet = array_shift($splittedBuffer);
-            $this->buffer = implode(Network::PACKET_SEPARATOR, $splittedBuffer);
+            try {
+                if (false === $this->socket->selectWrite()) {
+                    continue;
+                }
 
-            return $packet;
-        } catch (Exception $e) {
-            ++$this->failures;
+                if ($request instanceof Request && false === $request->isSent()) {
+                    $this->socket->write(json_encode($request) . self::PACKET_SEPARATOR);
+                    // Request has been sent to the client, mark it as sent
+                    $request->setSent(true);
+                    echo 'Request with id ' . $request->getId() . ' sent...' , PHP_EOL;
+                } elseif ($request instanceof Response && isset($this->nodeResponseStack[$request->getRequestId()])) {
+                    $this->socket->write(json_encode($request) . self::PACKET_SEPARATOR);
+                    // Response has been sent to the client, remove it from pending responses
+                    echo 'Response for request with id ' , $request->getRequestId() , ' sent...' , PHP_EOL;
+                    unset($this->nodeResponseStack[$request->getRequestId()]);
+                }
+            } catch(Exception $e) {
+                if($e->getCode() === SOCKET_EAGAIN || $e->getCode() === SOCKET_EWOULDBLOCK) {
+                    continue;
+                }
+
+                ++$this->failures;
+                throw $e;
+            }
         }
 
-        return null;
+        if (null === $packetData = $this->read(self::PACKET_SEPARATOR)) {
+            //echo 'No complete packet. buffer: ' , $this->buffer , PHP_EOL;
+            return;
+        }
+
+        // WE CAN GET BOTH - REQUESTS AND RESPONSES - HERE AS IT IS A TWO-WAY CONNECTION!
+
+        if (null === $packetData = json_decode($packetData, true)) {
+            throw new \RuntimeException('Invalid response for request');
+        }
+
+        if ($packetData['type'] === 'response') {
+            $this->handleResponse($packetData['data']);
+        } elseif ($packetData['type'] === 'request') {
+            $this->handleRequest($packetData['data']);
+        }
     }
 
     /**
-     * @param string $packetData
-     * @return int
+     * Handles responses from the client
+     * @param array $responseData
      */
-    public function writePacketData(string $packetData): int
+    private function handleResponse(array $responseData)
     {
-        try {
-            return $this->socket->write($packetData . Network::PACKET_SEPARATOR);
-        } catch (Exception $e) {
-            ++$this->failures;
+        $requestId = $responseData['id'];
+
+        if (false === isset($this->nodeRequestStack[$requestId])) {
+            throw new \RuntimeException(sprintf(
+                'Request with id %s is not pending (pending: %s)',
+                $requestId,
+                implode(', ', array_keys($this->nodeRequestStack))
+            ));
         }
+
+        $this->node->handleResponse($this, $this->nodeRequestStack[$requestId], $responseData);
+
+        unset($this->nodeRequestStack[$requestId]);
     }
 
     /**
-     * Checks if this peer is still alive
-     * @return bool
+     * Handles requests from the client. The request will be handled imediatly and a response will be queued to be
+     * send to the client as soon as it's not blocking
+     * @param array $requestData
      */
-    public function alive(): bool
+    private function handleRequest(array $requestData)
     {
-        try {
-            $this->writePacketData('PING');
+        $requestId = $requestData['id'];
 
-            return 'PONG' === $this->readPacketData();
-        } catch (\Exception $e) {
-            ++$this->failures;
-            echo $e->getMessage();
-            echo $e->getTraceAsString();
-            return false;
-        }
+        $this->nodeResponseStack[$requestId] = $this->node->handleRequest($requestData);
+    }
+
+    public function request(Request $request)
+    {
+        $this->nodeRequestStack[$request->getId()] = $request;
+    }
+
+    /**
+     * @return Socket
+     */
+    public function getSocket(): Socket
+    {
+        return $this->socket;
     }
 
     /**
@@ -114,26 +199,18 @@ class Peer implements PeerInterface
     }
 
     /**
-     * Returns the (IP) address through which this peer is reachable
-     * @return string
+     * @return PeerAddress|null
      */
-    public function getAddress(): string
+    public function getConnectionDetails(): ?PeerAddress
     {
-        try {
-            return $this->socket->getPeerName();
-        } catch (Exception $e) {
-            ++$this->failures;
-
-            throw $e;
-        }
+        return $this->connectionDetails;
     }
 
     /**
-     * Returns a list of peers this peer is connected to
-     * @return array|PeerInterface[]
+     * @param PeerAddress $connectionDetails
      */
-    public function getPeers(): array
+    public function setConnectionDetails(PeerAddress $connectionDetails): void
     {
-        return [];
+        $this->connectionDetails = $connectionDetails;
     }
 }

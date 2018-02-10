@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Examples;
 
 use Psr\Log\LoggerInterface;
-use Timesplinter\Blockchain\Peer\Network;
+use Timesplinter\Blockchain\Peer\Node;
 
 require __DIR__ .'/../vendor/autoload.php';
 
@@ -90,7 +90,7 @@ if (true === isset($argv[2])) {
 
 ob_implicit_flush();
 
-$network = new Network($port, $initialPeers, $logger);
+$network = new Node($port, $initialPeers, $logger);
 $network->run();
 
 //$network->stop();
