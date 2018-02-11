@@ -40,12 +40,21 @@ class Node
     private $port;
 
     /**
+     * @var bool
+     */
+    private $running = true;
+
+    /**
      * @param int             $port
      * @param array           $initialPeerAddresses
      * @param LoggerInterface $logger
      */
     public function __construct(int $port, array $initialPeerAddresses, LoggerInterface $logger)
     {
+        pcntl_signal(SIGHUP, [$this, 'stop']);
+        pcntl_signal(SIGINT, [$this, 'stop']);
+        pcntl_signal(SIGTERM, [$this, 'stop']);
+
         $ownIpAddress = getHostByName(getHostName());
         $this->ip = '127.0.0.1';
         $this->port = $port;
@@ -57,7 +66,7 @@ class Node
         $this->serverSocket->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
         $this->serverSocket->setBlocking(false);
 
-        $this->logger->info('Listening for incoming connections: ' . $this->ip . ':' . $this->port);
+        $this->logger->info('Listening for incoming connections: ' . $this->serverSocket->getSockName());
 
         foreach ($initialPeerAddresses as $peerAddress) {
             $this->peers[] = $peer = $this->createPeer($factory->createClient($peerAddress));
@@ -67,14 +76,20 @@ class Node
 
     public function run()
     {
-        while (true) {
+        while ($this->running) {
+            pcntl_signal_dispatch();
+
+            if (false === $this->running) {
+                break;
+            }
+
             if (true === $this->serverSocket->selectRead()) {
                 $this->peers[] = $peer = $this->createPeer($this->serverSocket->accept());
-                $this->logger->info('New peer connected: ' . $peer->getSocket()->getPeerName());
+                $this->logger->info('New peer connected: ' . $peer->getSocket()->getSockName());
                 $this->logger->info('Currently connected peers: ' . count($this->peers));
 
                 $peer->request(new Request('INTRODUCE'));
-                //$peer->request(new Request('GET_PEERS'));
+                $peer->request(new Request('GET_PEERS'));
             }
 
             foreach ($this->peers as $i => $peer) {
@@ -97,6 +112,33 @@ class Node
 
             usleep(1000);
         }
+    }
+
+    public function stop()
+    {
+        $this->logger->info('Shutting down node...');
+
+        $this->running = false;
+
+        foreach ($this->peers as $peer) {
+            $peer->disconnect();
+        }
+
+        try {
+            $this->serverSocket
+                ->shutdown()
+                ->close();
+        } catch (Exception $e) {
+            // If socket is already disconnected - fine... else throw the exception
+            if ($e->getCode() !== SOCKET_ENOTCONN) {
+                throw $e;
+            }
+        }
+
+        // Reset the signal handlers
+        pcntl_signal(SIGHUP,  SIG_DFL);
+        pcntl_signal(SIGINT,  SIG_DFL);
+        pcntl_signal(SIGTERM, SIG_DFL);
     }
 
     /**

@@ -64,11 +64,19 @@ class Peer
         $this->socket->setBlocking(false);
     }
 
-    private function read(string $separator): ?string
+    private function getNextPacket(string $separator): ?string
     {
         // @todo if buffer still contains *whole* packets don't read again but deliver next packet here
         // we have to do this because else we run into an endless loop cause the socket will
         // never give us something to read again or the other end waits forever (maybe...)
+        if (false !== ($pos = strpos($this->buffer, $separator))) {
+            $data = substr($this->buffer, 0, $pos);
+
+            $this->buffer = substr($this->buffer, $pos+1);
+
+            return $data;
+        }
+
         if (false === $this->socket->selectRead()) {
             //echo 'Blocked for read. buffer: ' , $this->buffer , PHP_EOL;
             return null;
@@ -76,18 +84,15 @@ class Peer
 
         $this->buffer .= $this->socket->read(1024);
 
-        if (false === ($pos = strpos($this->buffer, $separator)) || 0 === $pos) {
-            return null;
+        if (false !== ($pos = strpos($this->buffer, $separator))) {
+            $data = substr($this->buffer, 0, $pos);
+
+            $this->buffer = substr($this->buffer, $pos+1);
+
+            return $data;
         }
 
-        $splittedBuffer = explode($separator, $this->buffer);
-
-        array_filter($splittedBuffer);
-        $data = array_shift($splittedBuffer);
-
-        $this->buffer .= implode($separator, $splittedBuffer);
-
-        return $data;
+        return null;
     }
 
     /**
@@ -116,7 +121,7 @@ class Peer
                     echo 'Response for request with id ' , $request->getRequestId() , ' sent...' , PHP_EOL;
                     unset($this->nodeResponseStack[$request->getRequestId()]);
                 }
-            } catch(Exception $e) {
+            } catch (Exception $e) {
                 if($e->getCode() === SOCKET_EAGAIN || $e->getCode() === SOCKET_EWOULDBLOCK) {
                     continue;
                 }
@@ -126,7 +131,7 @@ class Peer
             }
         }
 
-        if (null === $packetData = $this->read(self::PACKET_SEPARATOR)) {
+        if (null === $packetData = $this->getNextPacket(self::PACKET_SEPARATOR)) {
             //echo 'No complete packet. buffer: ' , $this->buffer , PHP_EOL;
             return;
         }
@@ -188,6 +193,20 @@ class Peer
     public function getSocket(): Socket
     {
         return $this->socket;
+    }
+
+    /**
+     * @return void
+     */
+    public function disconnect(): void
+    {
+        try {
+            $this->socket->shutdown()->close();
+        } catch (Exception $e) {
+            if ($e->getCode() !== SOCKET_ENOTCONN) {
+                throw $e;
+            }
+        }
     }
 
     /**

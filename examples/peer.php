@@ -66,7 +66,7 @@ $logger = new class($showLevels) implements LoggerInterface {
             return;
         }
 
-        printf(date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
+        printf("\r" . date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
     }
 };
 
@@ -90,7 +90,5 @@ if (true === isset($argv[2])) {
 
 ob_implicit_flush();
 
-$network = new Node($port, $initialPeers, $logger);
-$network->run();
-
-//$network->stop();
+$node = new Node($port, $initialPeers, $logger);
+$node->run();
