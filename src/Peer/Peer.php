@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Timesplinter\Blockchain\Peer;
 
+use Psr\Log\LoggerInterface;
 use Socket\Raw\Exception;
 use Socket\Raw\Socket;
 
@@ -53,27 +54,30 @@ class Peer
     private $node;
 
     /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+    /**
      * BufferedSocket constructor.
      * @param Socket $socket
      * @param Node $node
+     * @param LoggerInterface $logger
      */
-    public function __construct(Socket $socket, Node $node)
+    public function __construct(Socket $socket, Node $node, LoggerInterface $logger)
     {
         $this->node = $node;
+        $this->logger = $logger;
         $this->socket = $socket;
         $this->socket->setBlocking(false);
     }
 
     private function getNextPacket(string $separator): ?string
     {
-        // @todo if buffer still contains *whole* packets don't read again but deliver next packet here
+        // If buffer still contains *whole* packets don't read again but deliver next packet here
         // we have to do this because else we run into an endless loop cause the socket will
         // never give us something to read again or the other end waits forever (maybe...)
-        if (false !== ($pos = strpos($this->buffer, $separator))) {
-            $data = substr($this->buffer, 0, $pos);
-
-            $this->buffer = substr($this->buffer, $pos+1);
-
+        if (null !== $data = $this->readPacketFromBuffer($separator)) {
             return $data;
         }
 
@@ -84,6 +88,11 @@ class Peer
 
         $this->buffer .= $this->socket->read(1024);
 
+        return $this->readPacketFromBuffer($separator);
+    }
+
+    private function readPacketFromBuffer($separator): ?string
+    {
         if (false !== ($pos = strpos($this->buffer, $separator))) {
             $data = substr($this->buffer, 0, $pos);
 
@@ -114,11 +123,11 @@ class Peer
                     $this->socket->write(json_encode($request) . self::PACKET_SEPARATOR);
                     // Request has been sent to the client, mark it as sent
                     $request->setSent(true);
-                    echo 'Request with id ' . $request->getId() . ' sent...' , PHP_EOL;
+                    $this->logger->debug('Request with id ' . $request->getId() . ' sent...');
                 } elseif ($request instanceof Response && isset($this->nodeResponseStack[$request->getRequestId()])) {
                     $this->socket->write(json_encode($request) . self::PACKET_SEPARATOR);
                     // Response has been sent to the client, remove it from pending responses
-                    echo 'Response for request with id ' , $request->getRequestId() , ' sent...' , PHP_EOL;
+                    $this->logger->debug('Response for request with id ' . $request->getRequestId() . ' sent...');
                     unset($this->nodeResponseStack[$request->getRequestId()]);
                 }
             } catch (Exception $e) {
@@ -132,19 +141,18 @@ class Peer
         }
 
         if (null === $packetData = $this->getNextPacket(self::PACKET_SEPARATOR)) {
-            //echo 'No complete packet. buffer: ' , $this->buffer , PHP_EOL;
             return;
         }
-
-        // WE CAN GET BOTH - REQUESTS AND RESPONSES - HERE AS IT IS A TWO-WAY CONNECTION!
 
         if (null === $packetData = json_decode($packetData, true)) {
             throw new \RuntimeException('Invalid response for request');
         }
 
         if ($packetData['type'] === 'response') {
+            // Handle outgoing responses from client
             $this->handleResponse($packetData['data']);
         } elseif ($packetData['type'] === 'request') {
+            // Handle incoming requests from client
             $this->handleRequest($packetData['data']);
         }
     }

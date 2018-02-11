@@ -70,7 +70,7 @@ class Node
 
         foreach ($initialPeerAddresses as $peerAddress) {
             $this->peers[] = $peer = $this->createPeer($factory->createClient($peerAddress));
-            //$peer->request(new Request('GET_PEERS'));
+            $peer->setConnectionDetails(PeerAddress::fromString($peerAddress));
         }
     }
 
@@ -89,10 +89,11 @@ class Node
                 $this->logger->info('Currently connected peers: ' . count($this->peers));
 
                 $peer->request(new Request('INTRODUCE'));
-                $peer->request(new Request('GET_PEERS'));
             }
 
             foreach ($this->peers as $i => $peer) {
+                $peer->request(new Request('GET_PEERS'));
+
                 try {
                     $peer->handle();
 
@@ -186,7 +187,11 @@ class Node
         }
 
         if ($request->getData() === 'GET_PEERS') {
-            $this->logger->info('Received peer list ('.count($responseData['data']).' peers) from: ' . (string) $peer->getConnectionDetails());
+            $peerListCount = count($responseData['data']);
+
+            if ($peerListCount > 0) {
+                $this->logger->info('Received '.$peerListCount.' new peers from ' . (string) $peer->getConnectionDetails());
+            }
             return;
         }
 
@@ -199,6 +204,6 @@ class Node
      */
     private function createPeer(Socket $socket): Peer
     {
-        return new Peer($socket, $this);
+        return new Peer($socket, $this, $this->logger);
     }
 }
