@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Timesplinter\Blockchain\Peer;
+
 use Psr\Log\LoggerInterface;
 use Socket\Raw\Exception;
 use Socket\Raw\Factory;
