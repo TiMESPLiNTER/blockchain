@@ -66,7 +66,7 @@ $logger = new class($showLevels) implements LoggerInterface {
             return;
         }
 
-        printf("\r" . date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
+        //printf("\r" . date('Y-m-d H:i:s') . ' [%s] %s' . PHP_EOL, $level, $message);
     }
 };
 

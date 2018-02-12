@@ -45,6 +45,16 @@ class Node
     private $running = true;
 
     /**
+     * @var int
+     */
+    private $startTime;
+
+    /**
+     * @var Factory
+     */
+    private $socketFactory;
+
+    /**
      * @param int             $port
      * @param array           $initialPeerAddresses
      * @param LoggerInterface $logger
@@ -59,29 +69,33 @@ class Node
         $this->ip = '127.0.0.1';
         $this->port = $port;
 
-        $factory = new Factory();
+        $this->socketFactory = new Factory();
 
         $this->logger = $logger;
-        $this->serverSocket = $factory->createServer($this->ip . ':' . $this->port);
+        $this->serverSocket = $this->socketFactory->createServer($this->ip . ':' . $this->port);
         $this->serverSocket->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
         $this->serverSocket->setBlocking(false);
 
         $this->logger->info('Listening for incoming connections: ' . $this->serverSocket->getSockName());
 
         foreach ($initialPeerAddresses as $peerAddress) {
-            $this->peers[] = $peer = $this->createPeer($factory->createClient($peerAddress));
+            $this->peers[] = $peer = $this->createPeer($this->socketFactory->createClient($peerAddress));
             $peer->setConnectionDetails(PeerAddress::fromString($peerAddress));
         }
     }
 
     public function run()
     {
+        $this->startTime = microtime(true);
+
         while ($this->running) {
             pcntl_signal_dispatch();
 
             if (false === $this->running) {
                 break;
             }
+
+            echo $this->printStatus();
 
             if (true === $this->serverSocket->selectRead()) {
                 $this->peers[] = $peer = $this->createPeer($this->serverSocket->accept());
@@ -98,16 +112,22 @@ class Node
                     $peer->handle();
 
                     if ($peer->getFailures() > 100) {
+                        $peer->disconnect();
                         unset($this->peers[$i]);
                         $this->logger->info('Kicked peer with id: ' . $i);
                         $this->logger->info('Currently connected peers: ' . count($this->peers));
                     }
                 } catch (Exception $e) {
-                    if ($e->getCode() === SOCKET_ECONNRESET) {
+                    if ($e->getCode() === SOCKET_ECONNRESET || $e->getCode() === SOCKET_EPIPE) {
+                        // Lost connection to peer -> remove it from list
+                        $peer->disconnect();
                         unset($this->peers[$i]);
                         $this->logger->info('Peer gone away.');
                         $this->logger->info('Currently connected peers: ' . count($this->peers));
+                        continue;
                     }
+
+                    throw $e;
                 }
             }
 
@@ -140,6 +160,19 @@ class Node
         pcntl_signal(SIGHUP,  SIG_DFL);
         pcntl_signal(SIGINT,  SIG_DFL);
         pcntl_signal(SIGTERM, SIG_DFL);
+    }
+
+    private function printStatus(): string
+    {
+        $deleteCurrentLine = "\r\033[2K";
+
+        $uptimeInSeconds = round(microtime(true) - $this->startTime);
+
+        $dtF = new \DateTime('@0');
+        $dtT = new \DateTime("@$uptimeInSeconds");
+        $uptimeStr = $dtF->diff($dtT)->format('%a d, %h h, %i m and %s s');
+
+        return $deleteCurrentLine . sprintf('peers: %s / uptime: %s', count($this->peers), $uptimeStr);
     }
 
     /**
@@ -189,13 +222,48 @@ class Node
         if ($request->getData() === 'GET_PEERS') {
             $peerListCount = count($responseData['data']);
 
-            if ($peerListCount > 0) {
-                $this->logger->info('Received '.$peerListCount.' new peers from ' . (string) $peer->getConnectionDetails());
+            if ($peerListCount === 0) {
+                return;
             }
+
+            $peerList = $this->getPeerList();
+
+            foreach ($responseData['data'] as $newPeer) {
+                $newPeerAddress = new PeerAddress($newPeer['address'], $newPeer['port']);
+
+                if (isset($peerList[(string) $newPeerAddress])) {
+                    continue;
+                }
+
+                try {
+                    $this->peers[] = $peer = $this->createPeer($this->socketFactory->createClient((string)$newPeerAddress));
+                    $peer->setConnectionDetails($newPeerAddress);
+                } catch (Exception $e) {
+                    continue;
+                }
+            }
+
+            $this->logger->info('Received '.$peerListCount.' new peers from ' . (string) $peer->getConnectionDetails());
+
             return;
         }
 
         var_dump($request, $responseData);
+    }
+
+    private function getPeerList(): array
+    {
+        $peers = [$this->ip . ':' . $this->port => true];
+
+        foreach ($this->peers as $peer) {
+            if (null === $peer->getConnectionDetails()) {
+                continue;
+            }
+
+            $peers[(string) $peer->getConnectionDetails()] = true;
+        }
+
+        return $peers;
     }
 
     /**
