@@ -7,6 +7,9 @@ use Psr\Log\LoggerInterface;
 use Socket\Raw\Exception;
 use Socket\Raw\Factory;
 use Socket\Raw\Socket;
+use Timesplinter\Blockchain\Peer\Command\CommandInterface;
+use Timesplinter\Blockchain\Peer\Command\GetPeersCommand;
+use Timesplinter\Blockchain\Peer\Command\IntroduceCommand;
 
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
@@ -55,6 +58,11 @@ class Node
     private $socketFactory;
 
     /**
+     * @var CommandInterface[]
+     */
+    private $commands;
+
+    /**
      * @param int             $port
      * @param array           $initialPeerAddresses
      * @param LoggerInterface $logger
@@ -75,6 +83,11 @@ class Node
         $this->serverSocket = $this->socketFactory->createServer($this->ip . ':' . $this->port);
         $this->serverSocket->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
         $this->serverSocket->setBlocking(false);
+
+        $this->commands = [
+            'INTRODUCE' => new IntroduceCommand($this),
+            'GET_PEERS' => new GetPeersCommand($this, $this->socketFactory, $this->logger),
+        ];
 
         $this->logger->info('Listening for incoming connections: ' . $this->serverSocket->getSockName());
 
@@ -181,25 +194,11 @@ class Node
      */
     public function handleRequest(array $requestData): Response
     {
-        $responseData = ['error' => 'Unknown request'];
 
-        if ($requestData['data'] === 'INTRODUCE') {
-            $responseData = ['ip' => $this->ip, 'port' => $this->port];
-        } elseif ($requestData['data'] === 'GET_PEERS') {
-            $peers = [];
-
-            foreach ($this->peers as $peer) {
-                if (null === $connectionDetails = $peer->getConnectionDetails()) {
-                    continue;
-                }
-
-                $peers[] = [
-                    'address' => $connectionDetails->getAddress(),
-                    'port' => $connectionDetails->getPort()
-                ];
-            }
-
-            $responseData = $peers;
+        if (isset($this->commands[$requestData['data']])) {
+            $responseData = $this->commands[$requestData['data']]->handleRequest($requestData);
+        } else {
+            $responseData = ['error' => 'Unknown request'];
         }
 
         return new Response($requestData['id'], $responseData);
@@ -213,57 +212,39 @@ class Node
     public function handleResponse(Peer $peer, Request $request, array $responseData): void
     {
 
-        if ($request->getData() === 'INTRODUCE') {
-            $peer->setConnectionDetails(new PeerAddress($responseData['data']['ip'], $responseData['data']['port']));
-            $this->logger->info('Peer introduced itself as: ' . (string) $peer->getConnectionDetails());
+        if (false === isset($this->commands[$request->getData()])) {
+            var_dump($request, $responseData);
             return;
         }
 
-        if ($request->getData() === 'GET_PEERS') {
-            $peerListCount = count($responseData['data']);
-
-            if ($peerListCount === 0) {
-                return;
-            }
-
-            $peerList = $this->getPeerList();
-
-            foreach ($responseData['data'] as $newPeer) {
-                $newPeerAddress = new PeerAddress($newPeer['address'], $newPeer['port']);
-
-                if (isset($peerList[(string) $newPeerAddress])) {
-                    continue;
-                }
-
-                try {
-                    $this->peers[] = $peer = $this->createPeer($this->socketFactory->createClient((string)$newPeerAddress));
-                    $peer->setConnectionDetails($newPeerAddress);
-                } catch (Exception $e) {
-                    continue;
-                }
-            }
-
-            $this->logger->info('Received '.$peerListCount.' new peers from ' . (string) $peer->getConnectionDetails());
-
-            return;
-        }
-
-        var_dump($request, $responseData);
+        $this->commands[$request->getData()]->handleResponse($peer, $request, $responseData);
     }
 
-    private function getPeerList(): array
+    /**
+     * Returns the peer address of this node
+     * @return PeerAddress
+     */
+    public function getPeerAddress(): PeerAddress
     {
-        $peers = [$this->ip . ':' . $this->port => true];
+        return new PeerAddress($this->ip, $this->port);
+    }
 
-        foreach ($this->peers as $peer) {
-            if (null === $peer->getConnectionDetails()) {
-                continue;
-            }
+    /**
+     * Returns all the peers this node is currently connected to
+     * @return array|Peer[]
+     */
+    public function getPeers(): array
+    {
+        return $this->peers;
+    }
 
-            $peers[(string) $peer->getConnectionDetails()] = true;
-        }
-
-        return $peers;
+    /**
+     * Adds a new peer to the list
+     * @param Peer $peer
+     */
+    public function addPeer(Peer $peer): void
+    {
+        $this->peers[] = $peer;
     }
 
     /**
