@@ -64,18 +64,18 @@ class Node
     private $commands;
 
     /**
+     * @param null|string     $address
      * @param int             $port
      * @param array           $initialPeerAddresses
      * @param LoggerInterface $logger
      */
-    public function __construct(int $port, array $initialPeerAddresses, LoggerInterface $logger)
+    public function __construct(?string $address, int $port, array $initialPeerAddresses, LoggerInterface $logger)
     {
         pcntl_signal(SIGHUP, [$this, 'stop']);
         pcntl_signal(SIGINT, [$this, 'stop']);
         pcntl_signal(SIGTERM, [$this, 'stop']);
 
-        $ownIpAddress = getHostByName(getHostName());
-        $this->ip = '127.0.0.1';
+        $this->ip = (null === $address) ? getHostByName(getHostName()) : $address;
         $this->port = $port;
 
         $this->socketFactory = new Factory();
@@ -184,9 +184,14 @@ class Node
 
         $dtF = new \DateTime('@0');
         $dtT = new \DateTime("@$uptimeInSeconds");
-        $uptimeStr = $dtF->diff($dtT)->format('%a d, %h h, %i m and %s s');
+        $uptimeStr = $dtF->diff($dtT)->format('%a:%H:%I:%S');
 
-        return $deleteCurrentLine . sprintf('peers: %s / uptime: %s', count($this->peers), $uptimeStr);
+        return sprintf(
+            $deleteCurrentLine .'listen on: %s / peers: %s / uptime: %s',
+            $this->serverSocket->getSockName(),
+            count($this->peers),
+            $uptimeStr
+        );
     }
 
     /**

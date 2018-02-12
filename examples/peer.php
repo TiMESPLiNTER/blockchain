@@ -71,10 +71,18 @@ $logger = new class($showLevels) implements LoggerInterface {
 };
 
 if (false === isset($argv[1])) {
-    echo 'Please provide a port to run.' , PHP_EOL;
+    echo 'Please provide a port (and optional an address [ip:]port) as a first argument to run this node.' , PHP_EOL;
     exit;
 } else {
-    $port = (int) $argv[1];
+    $bindAddressPort = explode(':' , $argv[1]);
+
+    if (count($bindAddressPort) === 1) {
+        $binAddress = null;
+        $bindPort = (int) $bindAddressPort[0];
+    } else {
+        $binAddress = $bindAddressPort[0];
+        $bindPort = (int) $bindAddressPort[1];
+    }
 }
 
 $initialPeers = [];
@@ -90,5 +98,5 @@ if (true === isset($argv[2])) {
 
 ob_implicit_flush();
 
-$node = new Node($port, $initialPeers, $logger);
+$node = new Node($binAddress, $bindPort, $initialPeers, $logger);
 $node->run();
