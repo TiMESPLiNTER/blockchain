@@ -34,14 +34,9 @@ class Node
     private $peers = [];
 
     /**
-     * @var string
+     * @var PeerAddress
      */
-    private $ip;
-
-    /**
-     * @var int
-     */
-    private $port;
+    private $ownAddress;
 
     /**
      * @var bool
@@ -71,17 +66,18 @@ class Node
      */
     public function __construct(?string $address, int $port, array $initialPeerAddresses, LoggerInterface $logger)
     {
-        pcntl_signal(SIGHUP, [$this, 'stop']);
-        pcntl_signal(SIGINT, [$this, 'stop']);
-        pcntl_signal(SIGTERM, [$this, 'stop']);
+        $stopCallable = [$this, 'stop'];
 
-        $this->ip = (null === $address) ? getHostByName(getHostName()) : $address;
-        $this->port = $port;
+        pcntl_signal(SIGHUP, $stopCallable);
+        pcntl_signal(SIGINT, $stopCallable);
+        pcntl_signal(SIGTERM, $stopCallable);
 
+        $ip = (null === $address) ? getHostByName(getHostName()) : $address;
+
+        $this->ownAddress = new PeerAddress($ip, $port);
         $this->socketFactory = new Factory();
-
         $this->logger = $logger;
-        $this->serverSocket = $this->socketFactory->createServer($this->ip . ':' . $this->port);
+        $this->serverSocket = $this->socketFactory->createServer((string) $this->ownAddress);
         $this->serverSocket->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
         $this->serverSocket->setBlocking(false);
 
@@ -93,8 +89,13 @@ class Node
         $this->logger->info('Listening for incoming connections: ' . $this->serverSocket->getSockName());
 
         foreach ($initialPeerAddresses as $peerAddress) {
-            $this->peers[] = $peer = $this->createPeer($this->socketFactory->createClient($peerAddress));
-            $peer->setConnectionDetails(PeerAddress::fromString($peerAddress));
+            try {
+                $this->peers[] = $peer = $this->createPeer($this->socketFactory->createClient($peerAddress));
+                $peer->setConnectionDetails(PeerAddress::fromString($peerAddress));
+            } catch (Exception $e) {
+                $this->logger->info('Could not connect to peer: ' . $peerAddress);
+                continue;
+            }
         }
     }
 
@@ -145,7 +146,8 @@ class Node
                 }
             }
 
-            usleep(1000);
+            // 1/10 second
+            usleep(100000);
         }
     }
 
@@ -232,7 +234,7 @@ class Node
      */
     public function getPeerAddress(): PeerAddress
     {
-        return new PeerAddress($this->ip, $this->port);
+        return $this->ownAddress;
     }
 
     /**
