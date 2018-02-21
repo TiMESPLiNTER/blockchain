@@ -5,7 +5,14 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Examples;
 
 use Psr\Log\LoggerInterface;
+use Timesplinter\Blockchain\Blockchain;
+use Timesplinter\Blockchain\BlockInterface;
+use Timesplinter\Blockchain\Peer\BlockchainSynchronizer;
 use Timesplinter\Blockchain\Peer\Node;
+use Timesplinter\Blockchain\Storage\File\FileStorage;
+use Timesplinter\Blockchain\Storage\File\LocalFile;
+use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkBlock as Block;
+use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkStrategy;
 
 require __DIR__ .'/../vendor/autoload.php';
 
@@ -98,5 +105,26 @@ if (true === isset($argv[2])) {
 
 ob_implicit_flush();
 
-$node = new Node($binAddress, $bindPort, $initialPeers, $logger);
+$serializeBlock = function(BlockInterface $block) {
+    return gzcompress(serialize($block));
+};
+
+$deserializeBlock = function(string $blockData) {
+    return unserialize(gzuncompress($blockData));
+};
+
+$blockchain = new Blockchain(
+    new ProofOfWorkStrategy(2),
+    new FileStorage(
+        new LocalFile(__DIR__ . '/blockchain.idx'),
+        new LocalFile(__DIR__ . '/blockchain.dat'),
+        $serializeBlock,
+        $deserializeBlock
+    ),
+    new Block('This is the genesis block!', new \DateTime('1970-01-01'))
+);
+
+$blockchainSynchronizer = new BlockchainSynchronizer($blockchain);
+
+$node = new Node($blockchain, $blockchainSynchronizer, $binAddress, $bindPort, $initialPeers, $logger);
 $node->run();

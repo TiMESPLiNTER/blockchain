@@ -37,7 +37,10 @@ final class Blockchain implements BlockchainInterface
 
         $this->strategy = $strategy;
         $this->storage  = $storage;
-        $this->storage->addBlock($genesisBlock);
+
+        if (0 === $this->storage->count()) {
+            $this->storage->addBlock($genesisBlock);
+        }
     }
 
     /**

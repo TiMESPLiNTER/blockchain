@@ -8,6 +8,8 @@ use Psr\Log\LoggerInterface;
 use Socket\Raw\Exception;
 use Socket\Raw\Factory;
 use Socket\Raw\Socket;
+use Timesplinter\Blockchain\BlockchainInterface;
+use Timesplinter\Blockchain\Peer\Command\ChainLengthCommand;
 use Timesplinter\Blockchain\Peer\Command\CommandInterface;
 use Timesplinter\Blockchain\Peer\Command\GetPeersCommand;
 use Timesplinter\Blockchain\Peer\Command\IntroduceCommand;
@@ -59,13 +61,31 @@ class Node
     private $commands;
 
     /**
-     * @param null|string     $address
-     * @param int             $port
-     * @param array           $initialPeerAddresses
-     * @param LoggerInterface $logger
+     * @var BlockchainInterface
      */
-    public function __construct(?string $address, int $port, array $initialPeerAddresses, LoggerInterface $logger)
-    {
+    private $blockchain;
+
+    /**
+     * @var BlockchainSynchronizer
+     */
+    private $blockchainSynchronizer;
+
+    /**
+     * @param BlockchainInterface    $blockchain
+     * @param BlockchainSynchronizer $blockchainSynchronizer
+     * @param null|string            $address
+     * @param int                    $port
+     * @param array                  $initialPeerAddresses
+     * @param LoggerInterface        $logger
+     */
+    public function __construct(
+        BlockchainInterface $blockchain,
+        BlockchainSynchronizer $blockchainSynchronizer,
+        ?string $address,
+        int $port,
+        array $initialPeerAddresses,
+        LoggerInterface $logger
+    ) {
         $stopCallable = [$this, 'stop'];
 
         pcntl_signal(SIGHUP, $stopCallable);
@@ -76,6 +96,8 @@ class Node
 
         $this->ownAddress = new PeerAddress($ip, $port);
         $this->socketFactory = new Factory();
+        $this->blockchain = $blockchain;
+        $this->blockchainSynchronizer = $blockchainSynchronizer;
         $this->logger = $logger;
         $this->serverSocket = $this->socketFactory->createServer((string) $this->ownAddress);
         $this->serverSocket->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
@@ -84,6 +106,7 @@ class Node
         $this->commands = [
             'INTRODUCE' => new IntroduceCommand($this),
             'GET_PEERS' => new GetPeersCommand($this, $this->socketFactory, $this->logger),
+            'CHAIN_LENGTH' => new ChainLengthCommand($this->blockchain, $this->blockchainSynchronizer),
         ];
 
         $this->logger->info('Listening for incoming connections: ' . $this->serverSocket->getSockName());
@@ -189,9 +212,10 @@ class Node
         $uptimeStr = $dtF->diff($dtT)->format('%a:%H:%I:%S');
 
         return sprintf(
-            $deleteCurrentLine .'listen on: %s / peers: %s / uptime: %s',
+            $deleteCurrentLine .'listen on: %s / peers: %s / block: %d / uptime: %s',
             $this->serverSocket->getSockName(),
             count($this->peers),
+            $this->blockchain->count(),
             $uptimeStr
         );
     }
