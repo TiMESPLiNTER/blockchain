@@ -18,9 +18,14 @@ $blockchain = new Blockchain(
 $start = microtime(true);
 
 $blockchain->addBlock($block1 = new Block('foo', new \DateTime('2018-01-01')));
+
+echo 'Block mined' , PHP_EOL;
+
 $blockchain->addBlock($block2 = new Block('bar', new \DateTime('2018-01-22')));
 
-echo round(microtime(true) - $start, 4) , ' seconds' , PHP_EOL;
+echo 'Block mined' , PHP_EOL;
+
+echo 'Duration: ' , round(microtime(true) - $start, 4) , ' seconds' , PHP_EOL;
 
 foreach ($blockchain as $i => $block) {
     echo 'Block ' , $i , ': ' , $block->getHash() , PHP_EOL;

@@ -82,8 +82,8 @@ final class Blockchain implements BlockchainInterface
         for ($i = 0; $i < $chainLength; ++$i) {
             $block = $this->storage->getBlock($i);
 
-            // Block has been tempered
             if ($block->getHash() !== $block->calculateHash()) {
+                // Block has been tempered
                 return false;
             }
 
@@ -94,8 +94,8 @@ final class Blockchain implements BlockchainInterface
 
             $previousBlock = $this->storage->getBlock($i-1);
 
-            // Block is not linked to previous block
             if ($block->getPreviousHash() !== $previousBlock->getHash()) {
+                // Block is not linked to previous block
                 return false;
             }
         }
