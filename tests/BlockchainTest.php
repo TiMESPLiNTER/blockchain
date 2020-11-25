@@ -6,10 +6,10 @@ namespace Timesplinter\Blockchain\Tests;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Timesplinter\Blockchain\Block;
 use Timesplinter\Blockchain\Blockchain;
 use Timesplinter\Blockchain\BlockInterface;
 use Timesplinter\Blockchain\Storage\StorageInterface;
-use Timesplinter\Blockchain\Strategy\NoProof\NoProofBlock as Block;
 use Timesplinter\Blockchain\StrategyInterface;
 
 /**
@@ -30,12 +30,6 @@ final class BlockchainTest extends TestCase
 
         $strategy = $this->getStrategy();
 
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(true);
-
         new Blockchain($strategy, $storage, $genesisBlock);
     }
 
@@ -45,12 +39,6 @@ final class BlockchainTest extends TestCase
         $storage = $this->getStorage();
 
         $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(true);
 
         $blockchain = new Blockchain($strategy, $storage, $genesisBlock);
 
@@ -69,12 +57,6 @@ final class BlockchainTest extends TestCase
             ->willReturn($count);
 
         $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(true);
 
         $blockchain = new Blockchain($strategy, $storage, $genesisBlock);
 
@@ -95,59 +77,9 @@ final class BlockchainTest extends TestCase
 
         $strategy = $this->getStrategy();
 
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(true);
-
         $blockchain = new Blockchain($strategy, $storage, $genesisBlock);
 
         self::assertSame($genesisBlock, $blockchain->getBlock($position));
-    }
-
-    public function testConstructorThrowsExceptionIfInvalidGenesisBlockHasBeenProvided()
-    {
-        $storage = $this->getStorage();
-        $genesisBlock = $this->getBlock();
-
-        self::expectException(\InvalidArgumentException::class);
-        self::expectExceptionMessage(
-            sprintf('Genesis block of type "%s" is not a valid type one for this chain', get_class($genesisBlock))
-        );
-
-        $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(false);
-
-        new Blockchain($strategy, $storage, $genesisBlock);
-    }
-
-    public function testAddBlockThrowsExceptionIfBlockIsNotSupportedByStrategy()
-    {
-        $genesisBlock = $this->getBlock();
-        $secondBlock = $this->getBlock();
-
-        self::expectException(\InvalidArgumentException::class);
-        self::expectExceptionMessage(
-            sprintf('Block of type "%s" is not supported by this strategy', get_class($secondBlock))
-        );
-
-        $storage = $this->getStorage();
-        $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::exactly(2))
-            ->method('supports')
-            ->withConsecutive($genesisBlock, $secondBlock)
-            ->willReturnOnConsecutiveCalls(true, false);
-
-        $blockchain = new Blockchain($strategy, $storage, $genesisBlock);
-        $blockchain->addBlock($secondBlock);
     }
 
     public function testAddBlockThrowsExceptionIfMiningBlockFails()
@@ -162,12 +94,6 @@ final class BlockchainTest extends TestCase
 
         $storage = $this->getStorage();
         $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::exactly(2))
-            ->method('supports')
-            ->withConsecutive($genesisBlock, $secondBlock)
-            ->willReturn(true);
 
         $strategy
             ->expects(self::once())
@@ -185,12 +111,6 @@ final class BlockchainTest extends TestCase
         $storage = $this->getStorage();
         $strategy = $this->getStrategy();
 
-        $strategy
-            ->expects(self::once())
-            ->method('supports')
-            ->with($genesisBlock)
-            ->willReturn(true);
-
         $blockchain = new Blockchain($strategy, $storage, $genesisBlock);
 
         self::assertTrue($blockchain->isValid());
@@ -198,15 +118,15 @@ final class BlockchainTest extends TestCase
 
     public function testIsValidReturnsFalseIfLatestBlockHasBeenTempered()
     {
-        $genesisBlock = new Block('This is genesis', new \DateTime());
-        $secondBlock = new Block('Second block', new \DateTime());
+        $genesisBlock = new Block('This is genesis');
+        $secondBlock = new Block('Second block');
 
         $storage = $this->getStorage();
 
         $storage
             ->expects(self::exactly(2))
             ->method('addBlock')
-            ->withConsecutive($genesisBlock, $secondBlock)
+            ->withConsecutive([$genesisBlock], [$secondBlock])
             ->willReturn(true);
 
         $storage
@@ -226,12 +146,6 @@ final class BlockchainTest extends TestCase
             ->willReturn($genesisBlock);
 
         $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::exactly(2))
-            ->method('supports')
-            ->withConsecutive($genesisBlock, $secondBlock)
-            ->willReturn(true);
 
         $strategy
             ->expects(self::once())
@@ -254,15 +168,15 @@ final class BlockchainTest extends TestCase
 
     public function testIsValidReturnsFalseIfGenesisBlockHasBeenTempered()
     {
-        $genesisBlock = new Block('This is genesis', new \DateTime());
-        $secondBlock = new Block('Second block', new \DateTime());
+        $genesisBlock = new Block('This is genesis');
+        $secondBlock = new Block('Second block');
 
         $storage = $this->getStorage();
 
         $storage
             ->expects(self::exactly(2))
             ->method('addBlock')
-            ->withConsecutive($genesisBlock, $secondBlock)
+            ->withConsecutive([$genesisBlock], [$secondBlock])
             ->willReturn(true);
 
         $storage
@@ -282,12 +196,6 @@ final class BlockchainTest extends TestCase
             ->willReturn($genesisBlock);
 
         $strategy = $this->getStrategy();
-
-        $strategy
-            ->expects(self::exactly(2))
-            ->method('supports')
-            ->withConsecutive($genesisBlock, $secondBlock)
-            ->willReturn(true);
 
         $strategy
             ->expects(self::once())
@@ -310,15 +218,15 @@ final class BlockchainTest extends TestCase
 
     public function testIsValidReturnsFalseIfLatestBlockIsNotConnectedToPreviousBlock()
     {
-        $genesisBlock = new Block('This is genesis', new \DateTime());
-        $secondBlock = new Block('Second block', new \DateTime());
+        $genesisBlock = new Block('This is genesis');
+        $secondBlock = new Block('Second block');
 
         $storage = $this->getStorage();
 
         $storage
             ->expects(self::exactly(2))
             ->method('addBlock')
-            ->withConsecutive($genesisBlock, $secondBlock)
+            ->withConsecutive([$genesisBlock], [$secondBlock])
             ->willReturn(true);
 
         $storage
@@ -342,12 +250,6 @@ final class BlockchainTest extends TestCase
         $strategy = $this->getStrategy();
 
         $strategy
-            ->expects(self::exactly(2))
-            ->method('supports')
-            ->withConsecutive($genesisBlock, $secondBlock)
-            ->willReturn(true);
-
-        $strategy
             ->expects(self::once())
             ->method('mine')
             ->with($secondBlock)
@@ -369,11 +271,9 @@ final class BlockchainTest extends TestCase
      */
     private function getStrategy(): StrategyInterface
     {
-        $strategy = $this->getMockBuilder(StrategyInterface::class)
-            ->setMethods(['supports', 'mine'])
+        return $this->getMockBuilder(StrategyInterface::class)
+            ->setMethodsExcept()
             ->getMockForAbstractClass();
-
-        return $strategy;
     }
 
     /**
@@ -381,10 +281,8 @@ final class BlockchainTest extends TestCase
      */
     private function getBlock(): BlockInterface
     {
-        $block = $this->getMockBuilder(BlockInterface::class)
+        return $this->getMockBuilder(BlockInterface::class)
             ->getMockForAbstractClass();
-
-        return $block;
     }
 
     /**
@@ -392,10 +290,8 @@ final class BlockchainTest extends TestCase
      */
     private function getStorage(): StorageInterface
     {
-        $storage = $this->getMockBuilder(StorageInterface::class)
-            ->setMethods(['addBlock', 'getBlock', 'getLatestBlock', 'next', 'current', 'count', 'key'])
+        return $this->getMockBuilder(StorageInterface::class)
+            ->setMethodsExcept()
             ->getMockForAbstractClass();
-
-        return $storage;
     }
 }

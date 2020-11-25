@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Timesplinter\Blockchain\Tests\Strategy\ProofOfWork;
 
 use PHPUnit\Framework\TestCase;
-use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkBlock;
+use Timesplinter\Blockchain\Block;
+use Timesplinter\Blockchain\BlockInterface;
+use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkBlockInterface;
 use Timesplinter\Blockchain\Strategy\ProofOfWork\ProofOfWorkStrategy;
 use Timesplinter\Blockchain\StrategyInterface;
 
@@ -19,15 +21,6 @@ final class ProofOfWorkStrategyTest extends TestCase
         $strategy = new ProofOfWorkStrategy(0);
 
         self::assertInstanceOf(StrategyInterface::class, $strategy);
-    }
-
-    public function testSupportsProofOfWorkBlockType()
-    {
-        $block = $this->getBlock();
-
-        $strategy = new ProofOfWorkStrategy(0);
-
-        self::assertTrue($strategy->supports($block));
     }
 
     public function testMineReturnsTrue()
@@ -44,17 +37,17 @@ final class ProofOfWorkStrategyTest extends TestCase
         $block = $this->getBlock();
 
         self::assertStringStartsNotWith('0', $block->getHash());
-        self::assertNull($block->getNonce());
+        self::assertNull($block->getHeader(ProofOfWorkBlockInterface::HEADER_NONCE));
 
         $strategy = new ProofOfWorkStrategy(1);
 
         self::assertTrue($strategy->mine($block));
         self::assertStringStartsWith('0', $block->getHash());
-        self::assertEquals(11, $block->getNonce());
+        self::assertEquals(9, $block->getHeader(ProofOfWorkBlockInterface::HEADER_NONCE));
     }
 
-    private function getBlock(): ProofOfWorkBlock
+    private function getBlock(): BlockInterface
     {
-        return new ProofOfWorkBlock('test', new \DateTime('2017-01-01'));
+        return new Block('test');
     }
 }

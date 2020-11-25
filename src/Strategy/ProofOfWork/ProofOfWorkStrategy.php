@@ -34,19 +34,15 @@ final class ProofOfWorkStrategy implements StrategyInterface
     {
         $prefix = str_repeat('0', $this->difficulty);
 
+        if (null === $nonce = $block->getHeader(ProofOfWorkBlockInterface::HEADER_NONCE)) {
+            $nonce = 0;
+        }
+
         while(substr($block->getHash(), 0, $this->difficulty) !== $prefix) {
-            $block->setNonce($block->getNonce() + 1);
+            $block->setHeader(ProofOfWorkBlockInterface::HEADER_NONCE, $nonce);
+            ++$nonce;
         }
 
         return true;
-    }
-
-    /**
-     * @param BlockInterface $block
-     * @return bool
-     */
-    public function supports(BlockInterface $block): bool
-    {
-        return $block instanceof ProofOfWorkBlockInterface;
     }
 }

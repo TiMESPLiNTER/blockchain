@@ -18,13 +18,4 @@ final class NoProofStrategy implements StrategyInterface
     {
         return true;
     }
-
-    /**
-     * @param BlockInterface $block The block to be checked
-     * @return bool True if block type is supported otherwise false
-     */
-    public function supports(BlockInterface $block): bool
-    {
-        return $block instanceof NoProofBlock;
-    }
 }

@@ -29,12 +29,6 @@ final class Blockchain implements BlockchainInterface
      */
     public function __construct(StrategyInterface $strategy, StorageInterface $storage, BlockInterface $genesisBlock)
     {
-        if (false === $strategy->supports($genesisBlock)) {
-            throw new \InvalidArgumentException(
-                sprintf('Genesis block of type "%s" is not a valid type one for this chain', get_class($genesisBlock))
-            );
-        }
-
         $this->strategy = $strategy;
         $this->storage  = $storage;
         $this->storage->addBlock($genesisBlock);
@@ -46,12 +40,6 @@ final class Blockchain implements BlockchainInterface
      */
     public function addBlock(BlockInterface $block): void
     {
-        if (false === $this->strategy->supports($block)) {
-            throw new \InvalidArgumentException(
-                sprintf('Block of type "%s" is not supported by this strategy', get_class($block))
-            );
-        }
-
         $block->setPreviousHash($this->getLatestBlock()->getHash());
 
         if (false === $this->strategy->mine($block)) {

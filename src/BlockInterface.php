@@ -7,17 +7,13 @@ namespace Timesplinter\Blockchain;
  */
 interface BlockInterface
 {
+    public const HEADER_TIMESTAMP = 'timestamp';
+
     /**
      * Returns the current hash of this block
      * @return string The hash of the block
      */
     public function getHash(): string;
-
-    /**
-     * Returns the timestamp of the block
-     * @return \DateTime
-     */
-    public function getTimestamp(): \DateTime;
 
     /**
      * Hash of the previous block this block is linked to
@@ -37,6 +33,26 @@ interface BlockInterface
      * @return void
      */
     public function setPreviousHash(string $previousHash): void;
+
+    /**
+     * Sets a value for a header name
+     * @param string $name
+     * @param string|int|float|boolean $value
+     */
+    public function setHeader(string $name, $value): void;
+
+    /**
+     * Returns the value for a header name. If the header does not exist null is returned
+     * @param string $name
+     * @return string|int|float|boolean|null
+     */
+    public function getHeader(string $name);
+
+    /**
+     * Returns all headers of this block
+     * @return array<string, string|int|float|boolean>
+     */
+    public function getHeaders(): array;
 
     /**
      * Updates the hash of this block

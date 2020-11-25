@@ -7,7 +7,7 @@ namespace Timesplinter\Blockchain;
 /**
  * @author Pascal Muenst <pascal@timesplinter.ch>
  */
-abstract class Block implements BlockInterface
+final class Block implements BlockInterface
 {
 
     /**
@@ -26,24 +26,19 @@ abstract class Block implements BlockInterface
     protected $data;
 
     /**
-     * @var \DateTime
+     * @var array<string, string|int|float|boolean>
      */
-    private $timestamp;
+    private $headers = [];
 
     /**
      * @param mixed $data
-     * @param \DateTime $timestamp
      */
-    public function __construct($data, \DateTime $timestamp)
+    public function __construct($data)
     {
         $this->data = $data;
-        $this->timestamp = $timestamp;
         $this->updateHash();
     }
 
-    /**
-     * @return string
-     */
     public function getHash(): string
     {
         return $this->hash;
@@ -54,44 +49,39 @@ abstract class Block implements BlockInterface
         return $this->data;
     }
 
-    /**
-     * @return null|string
-     */
     public function getPreviousHash(): ?string
     {
         return $this->previousHash;
     }
 
-    /**
-     * @param null|string $previousHash
-     * @return void
-     */
     public function setPreviousHash(?string $previousHash): void
     {
         $this->previousHash = $previousHash;
         $this->updateHash();
     }
 
-    /**
-     * @return \DateTime
-     */
-    public function getTimestamp(): \DateTime
+    public function getHeader(string $name)
     {
-        return $this->timestamp;
+        return $this->headers[$name] ?? null;
     }
 
-    /**
-     * @return string
-     */
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    public function setHeader(string $name, $value): void
+    {
+        $this->headers[$name] = $value;
+        $this->updateHash();
+    }
+
     public function calculateHash(): string
     {
         return hash('sha256', (string) $this);
     }
 
-    /**
-     * @return void
-     */
-    public function updateHash()
+    public function updateHash(): void
     {
         $this->hash = $this->calculateHash();
     }
@@ -101,6 +91,6 @@ abstract class Block implements BlockInterface
      */
     public function __toString(): string
     {
-        return serialize($this->data) . $this->timestamp->format('c') . $this->previousHash;
+        return serialize($this->data) . serialize($this->headers) . $this->previousHash;
     }
 }

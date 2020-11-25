@@ -12,10 +12,4 @@ interface StrategyInterface
      * @return bool True if mining was successful otherwise false
      */
     public function mine(BlockInterface $block): bool;
-
-    /**
-     * @param BlockInterface $block The block to be checked
-     * @return bool True if block type is supported otherwise false
-     */
-    public function supports(BlockInterface $block): bool;
 }
